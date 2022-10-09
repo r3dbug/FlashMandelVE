@@ -1,0 +1,63 @@
+Short:    Vamped Edition of FlashMandel
+Author:   Dino Papararo (DinoP@IName.Com) / Vampire optimizations by RedBug
+Uploader: RedBug
+Version:  2.0VE (September 2022)
+Type:     gfx/fract
+Requires: Amiga with 020/881 or better CPU and Wb/Kick 3.0+
+Replaces: gfx/fract/FlashMandelVE.lha
+
+This is a "Vamped Edition" of FlashMandel V2.0 published in 2001 by Dino Papararo.
+
+It's a hybrid version in the sense that it should to continue to work on "classic Amiga"
+(currently untested). If it is present the Vampire card is autodetected. You have then
+the possibility to switch forth and back by using the additional "Optimization" menu or
+the keyboard:
+
+- Amiga+(   =   accelerated Vampire routine
+- Amiga+)   =   classic 68881/2 routine
+
+Vampire specific optimizations:
+- use 3-operant functionality of FPU and additional registers (e.g: fadd e1,e3,e5)
+- parallelize Mandelbrot/Julia set calculation by using free cpu/fpu latencies
+
+Speed improvement is around 30% compared to "classic" version.
+
+As with the original program all source files are bundled with the program and you can use
+it for whatever you want to use them!
+
+Have fun!
+
+**********************************************************************************************
+
+Readme from the original author (V2.0):
+
+Full functional program for rendering Mandelbrot & Julia fractals in about 62k of code with many nice features.
+Support for ECS/AGA/RTG and 68020/68060 Amiga with an FPU.
+C & Asm 68k source included !
+
+FlashMandel is Giftware, If you like it just sent nice goodies to author just like $ or gold medals ;-))
+
+**********************************************************************************************
+
+New in this version:
+
+ Removed a stupid enforcer hit when accepting new limits.
+
+ I forgot to allocate the memory for the font name record... bugfixed sorry!
+
+ Now all pictures and palettes saved have a copyright note chunk inside.
+
+ Now when 'TAB' key is pressed during a rendering the skipped zone is hilighted 5 times.
+
+ You can show the guide choosing "Help..." from project menu or hitting the 'HELP' key into main window in asyncronous way.
+
+ Minor but important internal code changes with potential bugs removed.
+
+ Replaced 1 Julia picture and reworked a bit 2 palettes.
+
+ *** Added into source directory an assembly PPC routine never tested and implemented but it should be a realtime routine ;-)
+
+***********************************************************************************************
+*If you are an Amiga programmer and like FlashMandel contact me for a PPC porting under WarpOS*
+*or better MorphOS with REALTIME rendering and deeper calculations.                           *
+***********************************************************************************************

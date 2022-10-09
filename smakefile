@@ -1,0 +1,69 @@
+
+all: 
+    vasm -m68080 -Fhunk -o detectvamp.o detectvamp.s
+    vasm -m68080 -Fhunk Modules/Mandel.S -o mandel.o
+    vasm -m68080 -Fhunk Modules/Julia.S -o julia.o
+    sc Modules/Gfx.c
+    sc Modules/ColorWindow.c
+    sc Modules/Iff.c
+    sc link FlashMandel detectvamp.o
+    copy FlashMandel FlashMandelVE
+
+clean:
+    delete #?.tmp
+    delete #?.lnk
+    delete #?.o
+    delete Modules/#?.tmp
+    delete Modules/#?.lnk
+    delete Modules/#?.o
+    
+    
+modules:
+    vasm -m68080 -Fhunk -o detectvamp.o detectvamp.s
+    vasm -m68080 -Fhunk -o Modules/julia.o Julia.s
+    vasm -m68080 -Fhunk -o Modules/mandel.o Mandel.s
+    sc Modules/Gfx.c
+    sc Modules/ColorWindow.c
+    sc Modules/Iff.c
+ 
+main:
+    sc link FlashMandel detectvamp.o
+    copy FlashMandel FlashMandelVE
+    
+temp:
+    vasm -m68080 -Fhunk -o fractal_asm.o fractal_asm.s
+    sc link optimize opttime math=68881 cpu=68040 boundary_trace.c fractal_asm.o stripdebug
+    slink from boundary_trace to boundary_trace stripdebug
+    delete fractal_asm.o
+    delete boundary_trace.lnk
+    delete boundary_trace.o
+    delete boundary_trace.info
+    delete boundary_trace.lha
+    lha a boundary_trace.lha ""
+
+noopt:
+    vasm -m68080 -Fhunk -o fractal_asm.o fractal_asm.s
+    sc link math=68881 cpu=68040 boundary_trace.c fractal_asm.o
+    slink from boundary_trace to boundary_trace stripdebug
+   
+debug:
+    vasm -m68080 -Fhunk -linedebug -o fractal_asm.o fractal_asm.s
+    sc link math=68881 cpu=68040 debug=sf boundary_trace.c fractal_asm.o
+
+separate:
+    vasm -m68080 -Fhunk -o fractal_asm.o fractal_asm.s
+    sc optimize opttime math=68881 cpu=68040 boundary_trace.c fractal_asm.o
+    slink addsym from LIB:c.o+fractal_asm.o+boundary_trace.o to boundary_trace.sym lib LIB:scm881.lib+LIB:sc.lib+LIB:amiga.lib
+    slink from boundary_trace.sym to boundary_trace stripdebug
+    
+cross:
+    vasm -m68080 -Fhunk -o fractal_asm.o fractal_asm.s
+    sc link optimize opttime math=68881 cpu=68040 boundary_trace.c fractal_asm.o
+    slink from boundary_trace to boundary_trace stripdebug
+
+asm:
+    vasm -m68080 -Fhunk -o fractal_asm.o fractal_asm.s
+    sc link math=68881 cpu=68040 disassemble=boundary_trace.s boundary_trace.c fractal_asm.o
+    slink from boundary_trace to boundary_trace stripdebug
+ 
+
