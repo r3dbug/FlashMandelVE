@@ -1,0 +1,99 @@
+************************************************************************
+**            Written by Dino Papararo            09-Nov-1998
+**
+**  FUNCTION
+**
+**    MandReal -- perform Z = Z^2 + C iteration.
+**
+**  SYNOPSIS
+**
+**    WORD Mand (WORD Iterations,long double Cre,long double Cim)
+**
+**
+**  DESCRIPTION
+**
+**  C equivalent function:
+**
+**      ***************************************************************
+**      *WORD Mand (WORD Iterazioni,long double Cre,long double Cim)***
+**      *{                                                          ***
+**      *register long double zr,zi,zi2,Dist,MaxDist;               ***
+**      *                                                           ***
+**      *  zi = Cim;                                                ***
+**      *                                                           ***
+**      *  zr = Cre;                                                ***
+**      *                                                           ***
+**      *  MaxDist = 4.0;                                           ***
+**      *                                                           ***
+**      *  do {                                                     ***
+**      *       zi2 = zi * zi;                                      ***
+**      *                                                           ***
+**      *       zi = zr + zr;                                       ***
+**      *                                                           ***
+**      *       Dist = zr * zr + zi2;                               ***
+**      *                                                           ***
+**      *       zr = zr * zr - zi2;                                 ***
+**      *                                                           ***
+**      *       zi = zi * zi + Cim;                                 ***
+**      *                                                           ***
+**      *       zr = zr + Cre;                                      ***
+**      *                                                           ***
+**      *     } while (-- Iterazioni && (MaxDist > Dist));          ***
+**      *                                                           ***
+**      *  if (Iterazioni <= 0) Iterazioni = 1;                     ***
+**      *                                                           ***
+**      *  return Iterazioni;                                       ***
+**      *}                                                          ***
+**      ***************************************************************
+**
+**  This function tests if a point belongs or not at mandelbrot's set
+**
+**  Optimized for pipelines of PPC coprocessors
+**
+**  NOTICE: ALL VARIABLES ARE INTO REGISTERS FOR FULL SPEEEED
+**          THE REGISTERS ARE CHOOSEN TO RESPECT THE WarpOs V14 STANDARD CONTEXT SWITCHES
+**          A JULIA ROUTINE COULD BE WRITTEN FOLLOWING THE MANDELBROT FUNCTION EXAMPLE.
+**          -----------------THIS CODE IS UNTESTED !!!!----------------
+**
+**  r3:Iterations
+**  f0:Cre f1:Cim f2:Zr f3:Zi f4:Zi2 f5:Dist f6:MaxDist
+
+                include powerpc/ppcmacros.i
+
+                XDEF _MandPPC_FPU
+
+                section code
+                cpu POWERPC
+
+_MandPPC_FPU:
+
+                 prolog            ; start
+
+                 fmr   f3,f1       ; zi   = cim
+                 fmr   f2,f0       ; zr   = cre
+                 lf    f7,Four     ; maxdist = 4.0
+                 mtctr r3          ; load reg counter with iterations
+
+.Loop
+                 fmul  f4,f3,f3    ; zi2 = zi * zi
+                 fadd  f3,f2,f2    ; zi = 2 * zr
+                 fmadd f5,f2,f2,f4 ; dist = zr * zr + zi2
+                 fmsub f2,f2,f2,f4 ; zr [new] = zr * zr - zi2
+                 fmadd f3,f3,f3,f1 ; zi = zi * zi + Cim
+                 fadd  f2,f2,f0    ; zr [new] = zr + Cre
+                 fcmpu f5,f6       ; if maxdist > dist  and
+                 bdnzf GT,.Loop    ; if iterations != 0 loop
+
+.End
+
+                 mfctr r3          ; store iterations from reg counter
+                 ble   .Jump       ; if iterations <= 0
+                 li    r3,1        ; Iterations = 1
+.Jump
+
+                 epilog            ; end
+
+                 section data
+
+Four             dc.d  4.0
+

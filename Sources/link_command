@@ -1,0 +1,2 @@
+
+sc link detectvamp.o fmcgx.o Modules/iff.o Modules/Mandel.o Modules/gfx.o Modules/ColorWindow.o Modules/Julia.o FlashMandel.o rle.o Fractals.o drawing.o -o fmlinked

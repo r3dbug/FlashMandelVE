@@ -1,0 +1,4 @@
+FROM LIB:c.o "loadilbm.o"
+TO "loadilbm"
+LIB LIB:sc.lib LIB:amiga.lib
+

@@ -1,0 +1,4 @@
+FROM LIB:c.o "getbitmap1.o"
+TO "getbitmap1"
+LIB LIB:sc.lib LIB:amiga.lib
+

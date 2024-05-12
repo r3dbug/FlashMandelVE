@@ -1,29 +1,77 @@
 Short:    Vamped Edition of FlashMandel
-Author:   Dino Papararo (DinoP@IName.Com) / Vampire optimizations by RedBug
+Authors:   Dino Papararo / RedBug aka Marcel Maci (Vampire specific additions)
 Uploader: RedBug
-Version:  2.0VE (September 2022)
+Version:  FMVE "BurningShip" BETA V24.4 R21 (April 2024)
 Type:     gfx/fract
-Requires: Amiga with 020/881 or better CPU and Wb/Kick 3.0+
+Requires: Amiga with 020/881 or better CPU and Wb/Kick 3.0+ (Vampire V4 recommended)
 Replaces: gfx/fract/FlashMandelVE.lha
 
-This is a "Vamped Edition" of FlashMandel V2.0 published in 2001 by Dino Papararo.
+FlashMandel "BurningShip" Vamped Edition
+(Short: FMVE "BurningShip")
 
-It's a hybrid version in the sense that it should to continue to work on "classic Amiga"
-(currently untested). If it is present the Vampire card is autodetected. You have then
-the possibility to switch forth and back by using the additional "Optimization" menu or
-the keyboard:
+This is further developped and amplified "Vamped Edition" of FlashMandel V2.0 published 
+by Dino Papararo in 2001. FMVE is a ´hybrid´ program in the sense that many features should 
+continue to work on "classic Amiga" (currently not much tested). If it is present the Vampire 
+card is autodetected and Vampire specific features and optimizations are used.
 
-- Amiga+(   =   accelerated Vampire routine
-- Amiga+)   =   classic 68881/2 routine
+NEW FEATURES
 
-Vampire specific optimizations:
-- use 3-operant functionality of FPU and additional registers (e.g: fadd e1,e3,e5)
-- parallelize Mandelbrot/Julia set calculation by using free cpu/fpu latencies
+Vampire optimizations, e.g.:
+- Use 3-operant functionality of FPU and additional registers (e.g: fadd e1,e3,e5)
+- Parallelize Mandelbrot/Julia set calculation by using free cpu/fpu latencies
+- Speed improvement is around 30% compared to "classic" version.
+- Possibility to switch forth and back between classic and optimized via menu or keyboard
+- Direct and fast drawing to screenbuffer (with possibility to switch back to AmigaOS
+functions if desired)
 
-Speed improvement is around 30% compared to "classic" version.
+New fractals:
+- Multibrot (including fractional powers > 1.0)
+- BurningShip 
+- Buddhabrot (Nebulabrots)
+
+New calculation algorithms (available for all fractals):
+- Brute force
+- Tiling (original algorithm by Dino Papararo)
+- Boundary trace
+- Random drawing (for Nebulabrots)
+- Symmetry (for main view, if possible)
+
+New coloring algorithms (besides "classic iteration count") for 24bit modes:
+- Renormalized iteration count
+- Cyclic Sinus Coloring (like FlashMandelNG)
+- Three channel 24bit coloring for Nebulabrots
+
+New file format:
+- Support for Deep IFF (ILBM) Images (24bit truecolor)
+- New data chunk to include all calculation data
+- Histogram file for Buddhabrot (with RLE compression)
+- Backwards compatibility with old formats (pictures and palettes)
+
+New features / functions:
+- Real time visualization of orbits (in main view for all fractals)
+- Nebulabrot calculation can be stopped and resumed
+- Bailout value can be modified
+
+New pictures:
+- Sample pictures for new fractals have been included
+- Nice splash screen and new icon
 
 As with the original program all source files are bundled with the program and you can use
 it for whatever you want to use them!
+
+Compile and link with SAS/C and VASM:
+
+vasm -m68080 -Fhunk source_file.s -o object_file.o
+sc link FlashMandel detectvamp.o
+
+Or (easier), by typing:
+
+smake
+
+in the main folder.
+
+Thanks for Dino Papararo for his advice and permission to continue development for this
+new 68k version of FlashMandel.
 
 Have fun!
 

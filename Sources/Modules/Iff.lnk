@@ -1,0 +1,4 @@
+FROM LIB:c.o "/Modules/Iff.o"+"/Modules/Gfx.o"+"screen.o"+"24bitdemo.o"
+TO "/Modules/Iff"
+LIB LIB:sc.lib LIB:amiga.lib
+

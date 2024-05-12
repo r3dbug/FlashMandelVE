@@ -1,0 +1,93 @@
+CC = sc
+AS = vasm
+
+ASMOBJS = Modules/Mandel.o Modules/Julia.o Modules/Fractals.o detectvamp.o
+CMODULES = Modules/ColorWindow.o Modules/Iff.o Modules/Gfx.o
+COBJS = $(CMODULES) math_functions.o  rle.o histogram.o fmglobals.o fmcgx.o drawing.o symmetry.o shared.o classic.o vampire.o splash.o SAFP.o menu.o version.o fmevents.o FlashMandel.o
+
+ASMFLAGS = -m68080 -Fhunk
+
+# ASMOBJS
+
+all: $(COBJS) $(ASMOBJS)
+	$(CC) link $(COBJS) $(ASMOBJS)
+    copy FlashMandel /
+    
+Modules/Mandel.o: Modules/Mandel.S
+	$(AS) $(ASMFLAGS) Modules/Mandel.S -o Modules/Mandel.o
+	
+Modules/Julia.o: Modules/Julia.S
+	$(AS) $(ASMFLAGS) Modules/Julia.S -o Modules/Julia.o
+	
+Modules/Fractals.o: Modules/Fractals.s
+	$(AS) $(ASMFLAGS) Modules/Fractals.s -o Modules/Fractals.o
+
+detectvamp.o: detectvamp.s
+	$(AS) $(ASMFLAGS) detectvamp.s -o detectvamp.o
+	
+# COBJS
+
+FlashMandel.o: FlashMandel.c
+	$(CC) $(CFLAGS) FlashMandel.c NOLINK
+    
+Colorwindow.o: ColorWindow.h Colorwindow.c
+	$(CC) $(CFLAGS) ColorWindow.c NOLINK
+	 
+Iff.o: iff.h Iff.c
+	$(CC) $(CFLAGS) Iff.c NOLINK
+	
+Gfx.o: Gfx.h Gfx.c
+	$(CC) $(CFLAGS) Gfx.c NOLINK
+
+version.o: version.h version.c
+	$(CC) $(CFLAGS) version.c NOLINK
+    
+math_functions.o: math_functions.h math_functions.c
+	$(CC) $(CFLAGS) math_functions.c NOLINK
+    
+SAFP.o: SAFP.h SAFP.c
+	$(CC) $(CFLAGS) SAFP.c NOLINK
+    
+shared.o: shared.h shared.c
+	$(CC) $(CFLAGS) shared.c NOLINK
+
+classic.o: classic.h classic.c
+	$(CC) $(CFLAGS) classic.c NOLINK
+
+vampire.o: vampire.h vampire.c
+	$(CC) $(CFLAGS) vampire.c NOLINK
+          
+menu.o: fmglobals.h fmglobals.c menu.c
+	$(CC) $(CFLAGS) menu.c NOLINK
+    
+rle.o: rle.h rle.c
+	$(CC) $(CFLAGS) rle.c NOLINK
+       
+histogram.o: histogram.c histogram.c
+	$(CC) $(CFLAGS) histogram.c NOLINK
+    
+fmcgx.o: fmcgx.h fmcgx.c
+	$(CC) $(CFLAGS) fmcgx.c NOLINK
+
+fmglobals.o: fmglobals.h fmglobals.c
+	$(CC) $(CFLAGS) fmglobals.c NOLINK
+
+fmevents.o: fmevents.h fmevents.c
+	$(CC) $(CFLAGS) fmevents.c NOLINK
+
+symmetry.o: symmetry.h symmetry.c
+	$(CC) $(CFLAGS) symmetry.c NOLINK
+     
+drawing.o: drawing.h drawing.c
+	$(CC) $(CFLAGS) drawing.c NOLINK
+    
+splash.o: splash.h splash.c
+	$(CC) $(CFLAGS) splash.c NOLINK
+   
+clean:
+	delete \#?.o   
+
+cleanall:
+	delete "Modules/\#?.o"
+	delete \#?.o   
+

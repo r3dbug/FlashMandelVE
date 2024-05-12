@@ -1,0 +1,4 @@
+FROM LIB:c.o "24bitdemo.o"
+TO "24bitdemo"
+LIB LIB:sc.lib LIB:amiga.lib
+
