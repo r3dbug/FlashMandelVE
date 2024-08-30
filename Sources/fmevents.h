@@ -7,7 +7,7 @@
 #include <exec/types.h>
 #include <proto/diskfont.h>
 #include <proto/asl.h>
-#include <proto/utility.h>   /* ToUpper() */
+#include <proto/utility.h>   
 #include "Modules/Iff.h"
 #include "splash.h"
 #include "menu.h"
@@ -27,8 +27,14 @@ BOOL ShowCoords (struct Window *);
 void AdjustRatio (double *,double *,double *,double *,WORD,WORD,BOOL);
 void DisableDirectDrawing(void);
 void EnableDirectDrawing(void);
+void HandleBarString(double,double);
+void PrepareAndSaveAllNewSpecialChunkPic(struct ILBMInfo *);
+ULONG PackCPUInfo(void);
 
 /* probably obsolete */
+/*
 BOOL Preview (struct Window *,WORD,WORD);
+BOOL FontRequest (struct Window *);
+*/
 
 #endif /* FMEVENTS_H */

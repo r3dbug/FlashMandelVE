@@ -54,17 +54,17 @@
 
 BOOL Fade (struct Window *Win,ULONG *PaletteSrc,ULONG MaxStep,ULONG TimeDelay,BOOL ToBlack)
 {
-DisplayInfoHandle DHandle;
+  DisplayInfoHandle DHandle;
 
-struct DisplayInfo DInfo;
+  struct DisplayInfo DInfo;
 
-static ULONG PaletteTmp [3L * 252L + 2L];
+  static ULONG PaletteTmp [3L * 252L + 2L];
 
-LONG Var,Step;
+  LONG Var,Step;
 
-ULONG Range,ModeID;
+  ULONG Range,ModeID;
 
-BOOL AllBlack;
+  BOOL AllBlack;
 
   if ((Win->RPort->BitMap->Depth < 2L) || (MaxStep < 2L)) return FALSE;
 
@@ -136,21 +136,21 @@ BOOL AllBlack;
 
 BOOL Cycle (struct Window *Win,ULONG TimeDelay,BOOL Left)
 {
-DisplayInfoHandle DHandle;
+  DisplayInfoHandle DHandle;
 
-struct DisplayInfo DInfo;
+  struct DisplayInfo DInfo;
 
-struct IntuiMessage *Message;
+  struct IntuiMessage *Message;
 
-static ULONG Palette_Tmp [2L * 3L * 252L + 2L];
+  static ULONG Palette_Tmp [2L * 3L * 252L + 2L];
 
-BOOL Loop = TRUE;
+  BOOL Loop = TRUE;
 
-UWORD MyCode;
+  UWORD MyCode;
 
-ULONG MyClass,Counter = NULL,OldBlue,OldRed,Tmp_1,Tmp_2,HalfRange;
+  ULONG MyClass,Counter = NULL,OldBlue,OldRed,Tmp_1,Tmp_2,HalfRange;
 
-ULONG ModeID,Range;
+  ULONG ModeID,Range;
 
   if (Win->RPort->BitMap->Depth < 2L) return FALSE;
 

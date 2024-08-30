@@ -16,25 +16,43 @@
  *  cards. In this case it is possible to switch forth and back between 
  *  classic and optimized algorithm using the additional menu or the keybord: 
  *  Amiga+( and Amiga+). [If no optimized routine is available this setting
- *  doesn´t change anything.]
+ *  has no effect.]
  *  This version is partially compatible with ApolloOS (AROS).
  *
- *  Compilers used: SAS/C 6.58 / VASM 1.9a
+ *  Compilers used: SAS/C 6.58 / VASM 1.9f (2.0beta)
  *
  *  Build instruction: smake
- *  (See smakefile for details.)
+ *
+ *  (For a complete new build of all files, use make cleanall before smake,
+ *  see smakefile for details.)
  *
  */
 
 /*
-NOTES:
-- optimize Buddha
-- all variants of Mandel
+Ideas / to do's:
+- all variants of MultiMandel (<=1)
+- rotating zoom
+- Newton fractal
+- direct formulas for MultiInt 2,3,4,5
+- inner coloring (periodicity checking)
+- histogram halving (?) 
+- linear histogram (or other)
+- New tooltypes: APOLLOCORE=10000,OPTIMIZED=CLASSIC, NOHISTOGRAM, NOBUDDHA etc.
+- quick (= one key) screenshot save function (screenshot0001.iff etc.)
+- Networking (distributed calculation with nodes)
+- LCD screen support (Ultimate Expansion Board)
+- default aspect ratios (4:3, 16:10, 16:9 etc.)
+
+Animations:
+- "Fly in": automated zoom (automated saving of calculated frames)
+- "Voyage": define a path (several points, with Bezier curves) in Julia set an "travel"
+through the curve (with possibility to visualize path in an smaller window)
 
 KNOWN ISSUES:
 
-Screen modes (opened by OpenScreenTags):
-- not 100% reliable (but same with official screen mode utility in Coffin)
+Screenmodes (opened via ASLRequester, OpenScreenTags):
+- not 100% reliable (but same with official screenmode utility in Coffin) 
+=> might be ASLRequester that is not 100% reliable ?!
 - when switching from SAGA => PAL HIRES => NTSC HIRES the picture is TILTED
 - bitmap copy from PAL => SAGA 8bit works, but not from PAL => SAGA 24bit
 (Improved a bit PAL => SAGA 24bit by using standard bitmap paste function,
@@ -45,10 +63,44 @@ for AmigaOS draw functions when used with SAGA screens.)
 Bitmaps:
 - Freeing of AROS HIDD bitmaps is not possible (memory is lost)
 
-*/
+Load/Save:
+- When opening a Nebulabrot and trying to save it to the same file it 
+doesn´t work (all other fractal types aren´t affected, saving Nebulabrot
+several times to the same file works, as long as the same file wasn´t 
+loaded before).
 
-/* comment out to compile without test menu */
-/* #define TEST_MENU_ON */
+- Maxtime parameter to interrupt Nebulabrot isn´t precise.
+
+- Many includes fail during compilation (according to Snoopdos - probably
+wrong path, there is always a correct include found, so the whole thing 
+compiles ...)
+
+- Filerequester may have a semaphore problem (?!, has been impossible
+to verify reliably so far).
+
+- Precision when zooming into Nebulabrots diminuishes.
+
+- FlashMandel still looses 104 bytes sometimes (even when the program is
+just opened and closed, but it doesn´t happen always and might be related
+to not 100% reliable AVAIL on AmigaOS due to multitasking ?!).
+
+- Potential illegal memory access in StoreIterationsCoreASM() (impossible
+to verify so far).
+
+- Keyboard support is limited (e.g. parameters for Multibrot  can´t be 
+entered via keyboard)
+ 
+- Version number might different in About Requester and Title bar
+if no smake cleanall is done beforehand.
+
+- Screenmode filtering for 32bit screens might only work on Vampire 
+(untested, DisplayInfo doesn´t seem to report MaxDepth higher than
+24 bits (?!)).
+
+- Symmetry (= flipped bitmap copy) cannot be used (reliably) in combination 
+with system-friendly draw routines (= bitmap copy does a direct screenbuffer
+access).
+*/
 
 typedef char* CONST_STRPTR;
 extern struct Library* IntuitionBase;
@@ -64,7 +116,6 @@ struct Library* AROSBase;
 #include <intuition/gadgetclass.h>
 #include <graphics/gfxbase.h>
 #include <graphics/scale.h>
-/*#include <devices/printer.h>*/ /* printing functions disabled */
 #include <workbench/workbench.h>
 #include <iffp/ilbmapp.h>
 #include <proto/exec.h>
@@ -140,13 +191,10 @@ struct DisplayInfo DisplayInfo;
 
 struct DimensionInfo DimensionInfo;
 
-UWORD neww, newh, newd;
+UWORD neww, newh, newd, newdv;
 static UWORD lastw, lasth, lastd;
-UBYTE likelast;
+UBYTE likelast, eliminate;
 ULONG Accept = NULL;
-
-  /* filter all native graphics modes (vampire: only SAGA modes) */
-  /* if (!IsCyberModeID(DisplayID)) return FALSE; */
 
   DisplayHandle = FindDisplayInfo (DisplayID);
 
@@ -156,7 +204,7 @@ ULONG Accept = NULL;
      {
         neww = DimensionInfo.Nominal.MaxX;
 		newh = DimensionInfo.Nominal.MaxY;
-		newd = DimensionInfo.MaxDepth;
+		newdv = newd = DimensionInfo.MaxDepth;
 		
 		/* Cybergraphics BitMapAttrs function doesn't distinguish between 24/32bit screens.
 		   In the vampire graphics driver, the 24bit screen is listed first (followed by 32bit screen).
@@ -164,54 +212,50 @@ ULONG Accept = NULL;
 		   when another 24bit screen appears (means: 32bit screen which is listed 2nd won't appear
 		   in screen mode requester.
 		*/
-
-	    /*likelast=0;*/
-
-		likelast = (lastw == neww) && (lasth == newh) && (lastd == newd);
 		
-				
-		/* the variable Accept affects the screen modes that can be selected */
-		/*
-		Accept = (ULONG) ((DimensionInfo.MaxDepth <= MAX_DEPTH) && (DisplayInfo.PropertyFlags & DIPF_IS_WB));
-		Accept = (ULONG) ((DimensionInfo.MaxDepth > MAX_DEPTH) && (DisplayInfo.PropertyFlags & DIPF_IS_WB));
-		Accept = TRUE; /* accept all screenmodes */
-    
-		/* on classic Amiga (or UAE) show all screen modes */
-		
-		if (!vampire) likelast=0;
-		
-		/* likelast=0; // enable all screen modes */
-		
-	 	Accept = ((!likelast) && (((newd > MIN_DEPTH) && (newd <=8)) || (newd >=24)) && (DisplayInfo.PropertyFlags & DIPF_IS_WB)); /* exclude 15/16 bit and 32 bit screens */
-	 
+        likelast=0;
+		if (vampire)
+        {
+        	likelast = (lastw == neww) && (lasth == newh) && (lastd == newd);
+        }
+        
+        if (likelast) newdv=32;
+        
+   		eliminate = ((FM_NO32BITMODES) & ((newd==32) || (newdv==32)));
+             
 	 	lastw = neww;
 		lasth = newh;
 		lastd = newd;
 	 
-	 }
+		/* the variable Accept affects the screen modes that can be selected */
+     	Accept = TRUE;
+
+        if ((newd==15) || (newd==16)) Accept=FALSE; /* FM doesn´t support 15/16 bit modes */
+         
+        if (eliminate) Accept=FALSE;
+         
+     	if ((FM_NOPALNTSCMODES) && (!IsCyberModeID(DisplayID))) Accept=FALSE;
+         
+        if ((FM_NO24BITMODES) && (newd==24) && (newdv==24)) Accept=FALSE;
+
+        if ((FM_NO8BITMODES) && (newd==8) && (IsCyberModeID(DisplayID))) Accept=FALSE;
+     }
   }
-  /*	
-	if (Accept) printf("ACCEPT: ");
-	else printf("EXCLUDE: ");
-	
-	printf("DisplayHandle: %p Width: %d Height: %d DimensionInfo.MaxDepth: %d (likelast: %d)\n",
-		DisplayHandle, neww, newh, 
-		newd, likelast);
-  */
+  
   return Accept;
 }
 
 BOOL SMRequest (struct ILBMInfo *Ilbm)
 {
-/* taken from filter function */
-DisplayInfoHandle DisplayHandle;
-struct DimensionInfo DimensionInfo;
-struct ScreenModeRequester *SMReq;
-struct Window *Win = Ilbm->win;
-BOOL NewScreen = FALSE;
+  /* taken from filter function */
+  DisplayInfoHandle DisplayHandle;
+  struct DimensionInfo DimensionInfo;
+  struct ScreenModeRequester *SMReq;
+  struct Window *Win = Ilbm->win;
+  BOOL NewScreen = FALSE;
 
- if (SMReq = AllocAslRequest (ASL_ScreenModeRequest,NULL))
- {
+  if (SMReq = AllocAslRequest (ASL_ScreenModeRequest,NULL))
+  {
     if (AslRequestTags (SMReq,ASLSM_Window,Win,
                               ASLSM_SleepWindow,TRUE,
                               ASLSM_TitleText,"ScreenMode requester",
@@ -220,9 +264,10 @@ BOOL NewScreen = FALSE;
                               ASLSM_InitialWidth,310,
                               ASLSM_InitialHeight,((Win->Height) * 7) >> 3,
                               ASLSM_InitialDisplayID,GetVPModeID (Ilbm->vp),
-                              /*ASLSM_InitialDisplayWidth,Win->Width,
+                              /*
+                              ASLSM_InitialDisplayWidth,Win->Width,
                               ASLSM_InitialDisplayHeight,Win->Height,
-                              ASLSM_InitialDisplayDepth,Ilbm->wrp->BitMap->Depth,*/
+                              ASLSM_InitialDisplayDepth,Ilbm->wrp->BitMap->Depth, */
 							  /*ASLSM_InitialOverscanType,Ilbm->ucliptype,*/
                               /*ASLSM_InitialInfoOpened,TRUE,*/
                               ASLSM_InitialInfoLeftEdge,Win->LeftEdge + 310 + 15,
@@ -242,42 +287,47 @@ BOOL NewScreen = FALSE;
     {
        /* taken from filter function => get exact display info */
 	   DisplayHandle = FindDisplayInfo (SMReq->sm_DisplayID);
-	   /* GetDisplayInfoData (DisplayHandle,(UBYTE *) &DisplayInfo,sizeof (struct DisplayInfo),DTAG_DISP,DisplayID); */
 	   
 	   GetDisplayInfoData (DisplayHandle,(UBYTE *) &DimensionInfo,sizeof (struct DimensionInfo),DTAG_DIMS,SMReq->sm_DisplayID);
 	   
-	   /*
-	   printf("DimensionInfo.Nominal.MaxX: %d DimensionInfo.Nominal.MaxY: %d DimensionInfo.MaxDepth: %d SMReq->sm_DisplayDepth: %d DisplayID: %p (= Ilbm.camg)\n", 
-	   		DimensionInfo.Nominal.MaxX, DimensionInfo.Nominal.MaxY, DimensionInfo.MaxDepth, SMReq->sm_DisplayDepth, SMReq->sm_DisplayID);
-	   */	   
-       
 	   Ilbm->camg = SMReq->sm_DisplayID;
 
-       Ilbm->Bmhd.w = DimensionInfo.Nominal.MaxX+1; /*SMReq->sm_DisplayWidth;*/
+       Ilbm->Bmhd.w = DimensionInfo.Nominal.MaxX+1;
 
-       Ilbm->Bmhd.h = DimensionInfo.Nominal.MaxY+1; /*SMReq->sm_DisplayHeight;*/
+       Ilbm->Bmhd.h = DimensionInfo.Nominal.MaxY+1;
 
 	   Ilbm->Bmhd.nPlanes = DimensionInfo.MaxDepth;
 	   
        Ilbm->ucliptype = SMReq->sm_OverscanType;
 
-	   /* find out screen depth with LockBitMapTagList() */
+	   /* get screen depth via CGFX */
 	   bmapdepth=0; pixfmt=0;
 	   UnLockBitMapTagList(LockBitMapTagList(Ilbm->wrp->BitMap, (struct TagItem*) &query), (struct TagItem*) &query2);
 	   
-	   /*
-	   	printf("CGFX: bmapdepth: %d pixfmt: %d\n", bmapdepth, pixfmt);
-	   	printf("SMRequest(): SAGA-Register: Pixelformat: 0xdfe1f5: %p\n", *((UBYTE*)(0xdfe1f5)));
-	   	printf("SMRequest(): SAGA-Register: Resolution: 0xdfe1f4: %p\n", *((UBYTE*)(0xdfe1f4)));
-   	   */
-	   
+       /* disactivate smooth coloring when 8bit screen is opened */
+       if (SMOOTH_COLORING)
+       {
+       		if (bmapdepth==8) 
+            {
+            	SMOOTH_COLORING=0;  
+       	
+        		if (algorithm_before_smooth_coloring!=0xffffffff)
+                {
+        			BAILOUT_VALUE=bailout_before_smooth_coloring;
+            		algorithm = algorithm_before_smooth_coloring;
+                    algorithm_before_smooth_coloring = 0xffffffff; 
+                    FM_SMOOTH_COLORING_BAILOUT_1ST=TRUE;                         
+                }              	
+            }
+       }
+       
        NewScreen = TRUE;
     }
 
     FreeAslRequest (SMReq);
- }
+  }
 
- return NewScreen;
+  return NewScreen;
 }
 
 BOOL OpenCGX(void)
@@ -295,23 +345,101 @@ void CheckAROS(void)
    * but AROS / ApolloOS has some quirks and incompatibilities,
    * so detected_system can be used to work around those ... 
    */
+  detected_system=NOT_RUNNING_ON_AROS;
+  AROSBase = NULL;
+  FM_ALLOCTEMPRAST_FLAGS=BMF_INTERLEAVED | BMF_CLEAR | BMF_MINPLANES;
+  
   if (AROSBase = OpenLibrary("aros.library",0L))
   {
-	    detected_system=RUNNING_ON_AROS;
-		CloseLibrary(AROSBase);  
-		printf("Support on AROS / ApolloOS has some problems (e.g. certain memory can not be freed and is lost)\n");
-  } else detected_system=NOT_RUNNING_ON_AROS;
+    detected_system=RUNNING_ON_AROS;
+	CloseLibrary(AROSBase);  
+  } 
+  else 
+  {
+  	detected_system=NOT_RUNNING_ON_AROS;
+  }
+}
+
+void SystemSpecificMessageAndValues(void)
+{
+  if (detected_system==RUNNING_ON_AROS)
+  {
+  	/* AROS doesn't hide title bare reliably before calculation
+       => creates corrupted areas when direct drawing is used
+     * => define a delay as workaround
+     */
+    /* TempBM allocated with AllocTempRast() in FCGX.c 
+     * cannot be freed on AROS.
+       => See MMASK & MASK, followed by FreeBitMap().
+       => Fall back to non-interleaved bitmaps on AROS / ApolloOS (these can be created and freed without any problem)
+     */	
+    FM_ALLOCTEMPRAST_FLAGS=BMF_CLEAR | BMF_MINPLANES; /* no BMF_INTERLEAVED */
+    TITLE_HIDE_DELAY=DEF_AROS_TITLE_HIDE_DELAY;   
+  }
+  else
+  {
+  	/* BMF_INTERLEAVED works on AmigaOS */
+    FM_ALLOCTEMPRAST_FLAGS=BMF_INTERLEAVED | BMF_CLEAR | BMF_MINPLANES;
+    /* no delay necessary for AmigaOS */ 
+  	TITLE_HIDE_DELAY=0;  
+  }
+}
+
+UBYTE DetectArne(void) {
+	UBYTE value;
+	UBYTE* potgor=(UBYTE*)0xdff016;
+	value=(UBYTE)*potgor;
+	if (value & 2) return 1; /* ARNE */
+	else return 0; 			 /* Paula */	
+}
+
+BOOL isV2(UBYTE type)
+{
+    switch(type)
+    {
+    	case 1: /* v600 */
+        case 2: /* v500 */
+        case 6: /* v1200 */
+        	return TRUE;
+            break;
+        default :
+        	return FALSE;
+    }
 }
 
 void CheckVampire(void)
 {
-   /* autodetection for Vampire */
-  if (vampire_type=detectvamp()) {
+  UBYTE mpl;
+  
+  /* autodetection for Vampire */
+  vampire_type=detectvamp();
+ 
+  /* problem: sometimes (on uae) detectvamp() returns >0 */
+  /* => do further tests to be sure it is a Vampire */
+  /* (detectvamp() corrected - this problem might be solved now) */
+  switch (vampire_type)
+  {
+  		/* V2 */	
+        case 1: /* V600 */
+        case 2: /* V500 */
+        case 6: /* V1200 */
+  			/* what further check could be done here? */
+            mpl=GetClockMultiplyer();
+           
+            if ((mpl<11) || (mpl>14)) vampire_type=0; /* not 100% bullet proof ... but better than nothing ;) */	
+            break;  
+    	/* V4 */    
+        default :
+        	/* all V4 have ARNE => search for that */
+  			if (!DetectArne()) vampire_type=0; /* not a Vampire if there is no Arne (greetings;) */          
+  }
+ 
+  if (vampire_type) 
+  {
         vampire=1;
         optimized=1;
-
-		/* Vampire: select BOUNDARY as default */
-		SwitchMenuSelection(1,6,algorithm-BRUTE,2);
+		
+        /* Vampire: select BOUNDARY as default */
 		algorithm=BOUNDARY;	
 		drawing=DRAW_DIRECT;				
 		
@@ -320,17 +448,18 @@ void CheckVampire(void)
         optimized=0;
 		
   		/* Classic: select TILE as default */
-  		algorithm = TILE;
-		drawing=DRAW_CLASSIC;
+        algorithm=BOUNDARY;
+        /* for classic: use direct drawing but hide mouse pointer */
+        drawing=DRAW_DIRECT; 
+        /* hide mouse pointer during calculation */
+        FM_BUSY_MOUSE_POINTER = NO_POINTER; 
   }
 }
 
 void SetGlobalVariables(void)
 {
-  BUDDHA_RANDOMIZATION_FREQUENCY=0;
-  BUDDHA_USE_SYMMETRY=TRUE;
-  BUDDHA_BOUNDARY_RANDOMIZATION=0;
-  algorithm_buddha=BUDDHA_RANDOM;
+  USE_SYMMETRY=TRUE;
+  algorithm_buddha=1;
   FractalType = MANDEL;
   BaseFractalType = MANDEL;
   MultiPower = 2;
@@ -341,14 +470,13 @@ void SetGlobalVariables(void)
   strcpy(title_string, VERSION_TITLE_COMPLETE);
   
   /* set all function pointers */
-  SAFP();
+  FirstSAFP();  
 }
 
-BOOL DoInitialChecks(void)
+void DoInitialChecks(void)
 {
-  if (!OpenCGX()) return 1;
+  if (!OpenCGX()) printf("Unable to open CGX\n");
   CheckAROS();
-  if (!AllocBuddha()) return 1;
   CheckVampire();
 }
 
@@ -357,8 +485,8 @@ void GetIconToolTypesOrSetDefault(LONG Argc, CONST_STRPTR *Argv)
 	CONST_STRPTR *IconToolTypes;
 	if (IconToolTypes = (CONST_STRPTR *) ArgArrayInit (Argc,Argv))
   	{
-        MYILBM.Bmhd.w = ArgInt (IconToolTypes,"SCREENWIDTH",DEF_WIDTH);
-        MYILBM.Bmhd.h = ArgInt (IconToolTypes,"SCREENHEIGHT",DEF_HEIGHT);
+        DD_WIDTH = MYILBM.Bmhd.w = ArgInt (IconToolTypes,"SCREENWIDTH",DEF_WIDTH);
+        DD_HEIGHT = MYILBM.Bmhd.h = ArgInt (IconToolTypes,"SCREENHEIGHT",DEF_HEIGHT);
         MYILBM.Bmhd.nPlanes = ArgInt (IconToolTypes,"SCREENDEPTH",MAX_DEPTH);
 
         sscanf (ArgString (IconToolTypes,"SCREENMODE",DEF_MONITORSTR),"%lx",&MYILBM.camg);
@@ -379,6 +507,23 @@ void GetIconToolTypesOrSetDefault(LONG Argc, CONST_STRPTR *Argv)
 
         PRIORITY = ArgInt (IconToolTypes,"STARTPRI",DEF_STARTPRI);
 
+		/* override automatic detection of AmigaOS vs AROS/ApolloOS */		
+        if ( 
+        	strcmp( ArgString (IconToolTypes,"SYSTEM",NULL), "AROS"
+            	  )
+                  == NULL
+           ) detected_system=RUNNING_ON_AROS;
+        else if (
+        		 strcmp( ArgString (IconToolTypes,"SYSTEM",NULL), "APOLLOOS"
+            	       )
+                  	   == NULL
+           		) detected_system=RUNNING_ON_AROS;
+        else if (
+        		 strcmp( ArgString (IconToolTypes,"SYSTEM",NULL), "AMIGAOS"
+            	  	   )
+                  	   == NULL
+           		) detected_system=RUNNING_ON_AMIGAOS;
+        
         ArgArrayDone ();
 
         MYILBM.Bmhd.w = MIN (MAX_WIDTH,MAX (MYILBM.Bmhd.w,DEF_WIDTH));
@@ -394,19 +539,28 @@ void GetIconToolTypesOrSetDefault(LONG Argc, CONST_STRPTR *Argv)
 
     else
     {
-        MYILBM.camg = DEF_MONITOR;
+        if (isV2(vampire_type))
+        {
+            MYILBM.camg = DEF_MONITOR_VAMPIRE;
 
-		MYILBM.Bmhd.w = (vampire) ? VAMPIRE_WIDTH : DEF_WIDTH;
+			MYILBM.Bmhd.w = V2_WIDTH;
 
-        MYILBM.Bmhd.h = (vampire) ? VAMPIRE_HEIGHT : DEF_HEIGHT;
+        	MYILBM.Bmhd.h = V2_HEIGHT;
+            
+        	MYILBM.Bmhd.nPlanes = V2_DEPTH;
+        }
+        else 
+        {
+        	MYILBM.camg = (vampire) ? DEF_MONITOR_VAMPIRE : DEF_MONITOR;
 
-		/* maximum colors */
-        if (vampire) MYILBM.Bmhd.nPlanes = VAMPIRE_DEPTH;
-		else MYILBM.Bmhd.nPlanes = (CheckGFX () ? MAX_DEPTH : DEF_DEPTH); /* 24 */
-     	
-		/* printf("CheckGFX (1 = AGA, 2 = RTG, 3 = RTG && AGA): %d\n", CheckGFX()); */
-		/* MAX_COLORS when MakeDisplay(&ILBM) is called with nPlanes = 24 is 256 (=/= TRUECOLOR) */
-	}
+			MYILBM.Bmhd.w = (vampire) ? VAMPIRE_WIDTH : DEF_WIDTH;
+
+        	MYILBM.Bmhd.h = (vampire) ? VAMPIRE_HEIGHT : DEF_HEIGHT;
+
+        	if (vampire) MYILBM.Bmhd.nPlanes = VAMPIRE_DEPTH;
+			else MYILBM.Bmhd.nPlanes = (CheckGFX () ? MAX_DEPTH : DEF_DEPTH);
+		}	
+    }
 }
 
 BOOL OpenScreenFails(void)
@@ -423,9 +577,8 @@ BOOL OpenScreenFails(void)
 
 void SetPalette(void) 
 {
-	 /* PALETTE = (CheckGFX () ? COLORS_AGA : COLORS_ECS); */
 	 if (vampire) PALETTE = COLORS_AGA;
-	 else PALETTE = (CheckGFX () ? COLORS_AGA : COLORS_ECS); /* not sure if that maintains compatibility with classic machines */
+	 else PALETTE = COLORS_AGA; 
 	 
      if ((RMIN >= RMAX) || (IMIN >= IMAX))
      {
@@ -452,7 +605,7 @@ void SetPalette(void) 
 
 void SetMYILBM(void)
 {
-	MYILBM.ParseInfo.propchks = IlbmProps;
+    MYILBM.ParseInfo.propchks = IlbmProps;
 
     MYILBM.ParseInfo.collectchks = IlbmCollects;
 
@@ -479,12 +632,26 @@ void SetMYILBM(void)
 
 LONG main (LONG Argc,CONST_STRPTR *Argv)
 {
+  if (LaunchedFromShell()) Execute(ASSIGNPARENTDIR,NULL,NULL);
+  else Execute (ASSIGNCURRENTDIR,NULL,NULL);
   
+  DoInitialChecks();
   
-  if (!DoInitialChecks()) return 1;  
+  /* make exec save new e-regs in addition to classic ones */
+  if (vampire) SetVampireTaskSwitching();
+   	
+  /* V2 line may have some problems with optimized FPU code 
+   *  => set optimized to false by default 
+   */
+  if (isV2(vampire_type)) optimized=FALSE;
+  
+  InitBuddha();
+  
   SetGlobalVariables();
   
   GetIconToolTypesOrSetDefault(Argc, Argv);
+  
+  SystemSpecificMessageAndValues();
   
   if (OpenScreenFails())
   {
@@ -494,27 +661,26 @@ LONG main (LONG Argc,CONST_STRPTR *Argv)
   
   SetPalette();
   SetMYILBM();
-
-/* enable symmetry for first run for speed */
-  EnableSymmetry();
-     
   
   if (!PrepareMainMenuWindowAndPointer()) 
   {
+  
   	Fail (MakeDisplayError,20L);
   	goto End;
   }
-  
+   
+  SetMenuSelection();
   
   do
   {
      while (HandleEvents (&MYILBM) & NEWDISPLAY_MSG)
      {
-                   
         /* store source screen format */
-        if (IsAClassicScreen(MYILBM.camg))
+        if ((IsAClassicScreen(MYILBM.camg)) || (!vampire))
         {
-           	DD_SRC_BPP=0; /* set DD_SRC_BPP to 0 for PAL / NTSC screens in order to select */
+           	/* set DD_SRC_BPP to 0 for PAL / NTSC screens */
+            DD_SRC_BPP=0; 
+        	drawing=DRAW_CLASSIC;
         }
         else
         {			   
@@ -525,11 +691,12 @@ LONG main (LONG Argc,CONST_STRPTR *Argv)
 			DD_SRC_GREEN=DD_GREEN;
 			DD_SRC_BLUE=DD_BLUE;
 		}
-                   
+        
 		/* open new screen */
 		if (SMRequest (&MYILBM))
         {
-			if (ZMASK & MASK)
+			
+            if (ZMASK & MASK)
             {
                DrawBorder (MYILBM.wrp,&MYBORDER,0,0);
 
@@ -547,52 +714,110 @@ LONG main (LONG Argc,CONST_STRPTR *Argv)
             MYILBM.Bmhd.pageHeight = 0;
 
             CURRENT_MAX_COLORS = MakeDisplay (&MYILBM);
+            
+            /* store source screen format */
+        	if ((IsAClassicScreen(MYILBM.camg)) || (!vampire))
+        	{
+        	   	/* set DD_SRC_BPP to 0 for PAL / NTSC screens */
+        	    DD_SRC_BPP=0; 
+        		drawing=DRAW_CLASSIC;
+                FM_NEWSCR_CPY=FM_NEWSCR_RECALC;
+        	}
+        	else
+        	{			   
+        	   	DD_SRC_BPP=GetBitMapBPP(MYILBM.win->RPort->BitMap);
+				DD_SRC_PIXFMT=GetBitMapPixFMT(MYILBM.win->RPort->BitMap);
+				SetUpPixFMTDeltas(DD_SRC_PIXFMT);
+				DD_SRC_RED=DD_RED;
+				DD_SRC_GREEN=DD_GREEN;
+				DD_SRC_BLUE=DD_BLUE;
+			}         
 					  
             if (CURRENT_MAX_COLORS)
             {
                 CURRENT_MAX_COLORS -= RESERVED_PENS;
 
-				/* SetUpDirectDrawing(MYILBM.win); */
-			    SAFP(); /* change grayscale to truecolor buddha */
+			    SAFP();
 				SetMenuSelection();
 						 
-				SetRast(MYILBM.win->RPort,0);
-						 
-				/* store destination screen format */
-				DD_DST_BPP=DD_BPP; 			/* GetBitMapBPP(MYILBM.win->RPort->BitMap); */
-				DD_DST_PIXFMT=DD_PIXFMT; 	/* GetBitMapPixFMT(MYILBM.win->RPort->BitMap); */
-						 
-				/* set bitmap copy function */
-				switch (DD_SRC_BPP)
-				{
-					case 0 : PasteBitMap = PasteBitMapStandard; break;	/* DD_SRC_BPP == 0 means PAL / NTSC screen */					
-                    case 1 : PasteBitMap = (DD_DST_BPP==1) ? PasteBitMapStandard : PasteBitMapCLUT2RGB; break;
-					default : PasteBitMap = (DD_DST_BPP==1) ? PasteBitMapRGB2CLUT : PasteBitMapStandard; break;					
-				}
-						 
-				if (TMASK & MASK) ShowTitle (MYILBM.scr,FALSE);
-						
-				PasteBitMap (MYBITMAP,MYILBM.win,(WORD) GetBitMapAttr (MYBITMAP,BMA_WIDTH),(WORD) GetBitMapAttr (MYBITMAP,BMA_HEIGHT));
-					     
-				if (TMASK & MASK) ShowTitle (MYILBM.scr,TRUE);
-						 
-				PasteBitMap = PasteBitMapStandard;
-						 
-                if (Choice (MYILBM.win,"Rendering requester","Screen propreties are changed.\nImage and colors can be inaccurate.\n\nRecalculate ?"))
+    			/* select recalculate or bitmap copy */			
+                if ((FM_NEWSCR_CPY==FM_NEWSCR_BMCPY) || (FM_NEWSCR_CPY==NULL))
                 {
+    	         	/* use bitmap copy */   
+                    /* store destination screen format */
+					DD_DST_BPP=DD_BPP; 			
+					DD_DST_PIXFMT=DD_PIXFMT; 	
+						 
+					/* set bitmap copy function */
+					switch (DD_SRC_BPP)
+					{
+                    	/* DD_SRC_BPP == 0 means PAL / NTSC screen */
+						case 0 : PasteBitMap = PasteBitMapStandard; break;						
+    	                case 1 : PasteBitMap = (DD_DST_BPP==1) ? PasteBitMapStandard : PasteBitMapCLUT2RGB; break;
+						default : PasteBitMap = (DD_DST_BPP==1) ? PasteBitMapRGB2CLUT : PasteBitMapStandard;				
+					}
+						 
+					if (TMASK & MASK) ShowTitle (MYILBM.scr,FALSE);
+							
+					PasteBitMap (MYBITMAP,MYILBM.win,(WORD) GetBitMapAttr (MYBITMAP,BMA_WIDTH),(WORD) GetBitMapAttr (MYBITMAP,BMA_HEIGHT));
+					     
+					if (TMASK & MASK) ShowTitle (MYILBM.scr,TRUE);
+						 
+					PasteBitMap = PasteBitMapStandard;
+				
+                	if (FM_NEWSCR_CPY==NULL)
+                    {	
+                    	if (Choice (MYILBM.win,"Rendering requester","Screen propreties are changed.\nImage and colors can be inaccurate\nusing bitmap copy function.\n\nRecalculate ?"))
+    					{
+                            /* use recalculate */				 
+                   			SetMenuStop (MYILBM.win);
+
+                   			PutPointer (MYILBM.win,0,0,0,0,0,FM_BUSY_MOUSE_POINTER);
+                            
+                    		ELAPSEDTIME = DrawFractalWrapper (MYILBM.win,(LONG) (MYILBM.win->LeftEdge),(LONG) (MYILBM.win->TopEdge),(LONG) (MYILBM.win->Width) - 1L,(LONG) (MYILBM.win->Height) - 1L);
+                    
+                    		PutPointer (MYILBM.win,ZoomPointer,ZPW,ZPH,ZPXO,ZPYO,ZOOM_POINTER);
+								
+                    		SetMenuStart (MYILBM.win);
+                            
+                    		ShowTime (MYILBM.win,"Rendering elapsed time:",ELAPSEDTIME);
+                        }		
+                	}
+                }
+                else 			
+                {	
+                    /* use recalculate instead of bitmap copy */				 
                    	SetMenuStop (MYILBM.win);
 
-                   	PutPointer (MYILBM.win,0,0,0,0,0,BUSY_POINTER);
+                   	PutPointer (MYILBM.win,0,0,0,0,0,FM_BUSY_MOUSE_POINTER);
+          
+          			if (
+        				(USE_SYMMETRY) 
+                        &&
+                        (RMIN==INIT_DEF_RMIN)
+                        &&
+                        (RMAX==INIT_DEF_RMAX)
+                        &&
+                        (IMIN==INIT_DEF_IMIN)
+                        &&
+                        (IMAX==INIT_DEF_IMAX)
+                        &&
+                        (!JULIA)
+                        && 
+                        (FractalType!=BURNINGSHIP)
+                        && 
+                        (FractalType!=BUDDHA)
+                       )
+                          EnableSymmetry();
 
-					ELAPSEDTIME = DrawFractal (MYILBM.win,(LONG) (MYILBM.win->LeftEdge),(LONG) (MYILBM.win->TopEdge),(LONG) (MYILBM.win->Width) - 1L,(LONG) (MYILBM.win->Height) - 1L);
-
+                    ELAPSEDTIME = DrawFractalWrapper (MYILBM.win,(LONG) (MYILBM.win->LeftEdge),(LONG) (MYILBM.win->TopEdge),(LONG) (MYILBM.win->Width) - 1L,(LONG) (MYILBM.win->Height) - 1L);
+                    
                     PutPointer (MYILBM.win,ZoomPointer,ZPW,ZPH,ZPXO,ZPYO,ZOOM_POINTER);
 							
                     SetMenuStart (MYILBM.win);
 
                     ShowTime (MYILBM.win,"Rendering elapsed time:",ELAPSEDTIME);
-                }
-                      	 
+ 				}                     	 
 	   			bmapdepth=0; pixfmt=0;
 	   			UnLockBitMapTagList(LockBitMapTagList(MYILBM.wrp->BitMap, (struct TagItem*) &query), (struct TagItem*) &query2);
 	   
@@ -602,8 +827,6 @@ LONG main (LONG Argc,CONST_STRPTR *Argv)
             else
             {
                 Fail (MakeDisplayError,20L);
-
-               break; /*????*/
             }
         }
      }
@@ -612,20 +835,31 @@ LONG main (LONG Argc,CONST_STRPTR *Argv)
   } while (! Choice (MYILBM.win,"Exit requester","Are you sure ?"));
 
   if (BMASK & MASK) FreeBitMapSafety (MYBITMAP);
+ 
+  /* disable fading */
+  /* Fade (MYILBM.win,PALETTE,50L,1L,TOBLACK); */
+  ClearMenuStrip(MYILBM.win);
 
-  Execute (ASSIGNREMOVE,NULL,NULL);
-
-  Fade (MYILBM.win,PALETTE,50L,1L,TOBLACK);
+  FreeMenus (MAINMENU);
 
   CloseDisplay (&MYILBM,VINFO);
 
-  FreeMenus (MAINMENU);
-   
 End:
   /* free buffers / close libraries / exit */
   if (ScrCpyBuffer) FreeBitMap(ScrCpyBuffer); /* background copy for orbits */
-  FreeBuddha();
+
+  DeallocateBoundary();
+
   if (CyberGfxBase) CloseLibrary(CyberGfxBase);
+  
+  FreeBuddha();
+
+  /* NOTE:
+   * ASSIGNREMOVE may be a problem if several instances of FM are running.
+   * (Instance A removes ASSIGN, then instance B tries to access FLASHMANDEL:).
+   */
+  Execute (ASSIGNREMOVE,NULL,NULL); 
+
   exit (RETURNVALUE);
 }
 

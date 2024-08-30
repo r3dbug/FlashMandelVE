@@ -40,6 +40,7 @@ void PutPixelPenGray2RGB(ULONG, ULONG, ULONG);
 void PutPixelRGB(ULONG, ULONG, UBYTE, UBYTE, UBYTE);
 UBYTE FindPenByRGB(UBYTE, UBYTE, UBYTE);
 ULONG GetPixelClassicPen(ULONG, ULONG);
+ULONG GetPixelRGB24(ULONG, ULONG);
 ULONG GetPixelRGB24Pen(ULONG, ULONG);
 ULONG GetPixelCLUT8Pen(ULONG, ULONG);
 void PutPixelCLUT2RGB(ULONG, ULONG, ULONG);
@@ -58,7 +59,6 @@ void RectColorFillDirectCLUT2RGB(struct RastPort*, ULONG, ULONG, ULONG, ULONG, U
 void RectColorFill(struct RastPort*, ULONG, ULONG, ULONG, ULONG, ULONG);
 
 /* from FlashMandel main program */
-/*void FreeBitMapSafety (struct BitMap*); /* could this go to fmcgx.h ?! */
 
 /****************************************************************************************************/
 /***************************************** BitMap functions *****************************************/

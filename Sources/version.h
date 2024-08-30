@@ -2,6 +2,8 @@
 #ifndef VERSION_H
 #define VERSION_H
 
+#include "fmglobals.h"
+
 /* Version UWORD (from higher to lower):
  *
  * Bits 15-9: year (0-127) - add 2000 to get the actual year
@@ -26,6 +28,8 @@ UWORD PackVersionWord(ULONG, ULONG, ULONG);
 UBYTE GetYear(UWORD);
 UBYTE GetMonth(UWORD);
 UBYTE GetDay(UWORD);
+BOOL ANewerThanB(UWORD, UWORD);
+BOOL ActualNewerThanB(UWORD);
 BOOL IsBeta(UWORD);
 
 #endif

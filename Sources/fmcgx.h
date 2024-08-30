@@ -12,7 +12,6 @@ ULONG GetBitMapBPP(struct BitMap*);
 ULONG GetBitMapPixFMT(struct BitMap*);
 void* GetBitMapPtr(struct BitMap*);
 void   FreeBitMapSafety (struct BitMap *);
-void FreeILBMBitMapOnAROS(struct BitMap *);
 BOOL IsAClassicScreen(LONG);
 struct BitMap *CopyBitMap (struct Window *,WORD,WORD,WORD,WORD);
 
@@ -26,6 +25,8 @@ struct Window *OpenDisplay (struct ILBMInfo *,WORD,WORD,WORD,ULONG);
 ULONG ModeFallBack (ULONG,WORD,WORD,WORD);
 VOID ClipIt (WORD,WORD,struct Rectangle *,struct Rectangle *,struct Rectangle *, struct Rectangle *,struct Rectangle *, struct Rectangle *,BOOL);
 LONG CheckGFX (VOID);
+
+void DebugBitmap(struct BitMap *);
 
 extern ULONG bmapdepth, pixfmt;
 extern ULONG query[];

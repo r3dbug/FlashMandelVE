@@ -46,5 +46,8 @@ VOID SetMenuStart (struct Window *);
 /* stop menus (e.g. before a calculation */
 VOID SetMenuStop (struct Window *);
 
+/* screen title handling */
+void OffTitle(struct Screen*);
+void OnTitle(struct Screen*);
 
 #endif /* MENU_H */

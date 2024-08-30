@@ -26,7 +26,6 @@ ULONG DrawJuliaFractalBruteVampire (struct Window *,const LONG,const LONG,const 
 void MHLine_Vampire (struct RastPort *,const LONG,const LONG,const LONG);
 void MVLine_Vampire (struct RastPort *,const LONG,const LONG,const LONG);
 
-
 /* (2b) Julia */ 
 /* (2ba) Horizontal */
 
@@ -40,15 +39,7 @@ void JVLine_Vampire (struct RastPort *,const LONG,const LONG,const LONG);
 
 /* (3a) Mandelbrot */
 
-UWORD LoadMandelVampire(ULONG); 
-void ScanMandelVampire(ULONG); 
-ULONG DrawMandelFractalBoundaryVampire (struct Window *,const LONG,const LONG,const LONG,const LONG);
-
-
 /* (3b) Julia */
-
-UWORD LoadJuliaVampire(ULONG); 
-ULONG DrawJuliaFractalBoundaryVampire (struct Window *,const LONG,const LONG,const LONG,const LONG);
 
 #endif /* VAMPIRE_H */
 

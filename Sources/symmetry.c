@@ -7,13 +7,9 @@ ULONG (*OriginalDrawFractal) (struct Window *,const LONG,const LONG,const LONG,c
 void DisableSymmetry(void)
 {
 	DrawFractal = OriginalDrawFractal;
-/*
-	printf("Symmetry disabled: INCREMREAL: %1.2f INCREMIMAG: %1.2f\n", INCREMREAL, INCREMIMAG);
-	printf("RMIN: %1.2f RMAX: %1.2f IMIN: %1.2f IMAX: %1.2f\n", RMIN, RMAX, IMIN, IMAX); 
-*/	
 }
 
-ULONG DrawFractalUsingSymmetry(struct Window *Win, const LONG a1,const LONG b1,const LONG a2,const LONG b2)
+double DrawFractalUsingSymmetry(struct Window *Win, const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
 ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
 static double CpyIMIN, CpyIMAX;
@@ -22,22 +18,21 @@ struct BitMap *bm;
 ULONG y1, y2, stop;
 double di;
 
-	if (vampire) SetRast(Win->RPort,1);
-	
 	CurrentTime (&StartSec,&Dummy);
-	
+	if (optimized) SetStart();
+    
 	CpyIMIN = IMIN;
 	CpyIMAX = IMAX;
 	
 
 	/* calculate di for middle line */
- 	/* INCREMIMAG =*/ di = (fabs (IMAX-IMIN)) / Win->Height;
+ 	di = (fabs (IMAX-IMIN)) / Win->Height;
 
 	/* calculate new b1, b2 */
 	NewB2=b2 / 2 + 1;
 
 	/* adapt IMIN / IMAX */	
-	IMIN = -di; /* -0.00625; //(IMIN + IMAX) / 2.0; */
+	IMIN = -di; 
 	
 	OriginalDrawFractal(Win, a1, b1, a2, NewB2);	
 	
@@ -52,6 +47,7 @@ double di;
 		y2--;
 	}
 	
+    if (optimized) SetStop();
 	CurrentTime (&EndSec,&Dummy);
 	
 	/* restore original values */
@@ -62,11 +58,33 @@ double di;
 	
 	DisableSymmetry();
 	
-	return (EndSec-StartSec);
+	if ((optimized) && ((EndSec-StartSec)<45)) return GetTime();
+    else return (double)(EndSec-StartSec);
 }
 
 void EnableSymmetry(void) 
 {
-	OriginalDrawFractal = DrawFractal;
-	DrawFractal =  DrawFractalUsingSymmetry; /*OriginalDrawFractal;*/
+    if (
+    	(USE_SYMMETRY) && 
+        
+            (!	
+              (
+            	/* forbid symmetry for system-friendly drawing when selected
+                   (symmetry uses direct buffer access which might created
+                   wrong results)
+                 */	
+                (FM_FORBID_SYMMETRY)
+                &&
+                (drawing==DRAW_CLASSIC)
+              )
+            )
+       )
+    {	
+    	OriginalDrawFractal = DrawFractal;
+		DrawFractal = DrawFractalUsingSymmetry;
+	}
+    else
+    {
+    	OriginalDrawFractal = DrawFractal;
+    }
 }

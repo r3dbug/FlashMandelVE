@@ -231,6 +231,8 @@ _juliapar4iterateasmvert:
 	; prepare
 	fmovem  fp2-fp7,-(sp)
 	movem.l d0-d3,-(sp)
+    fmove.d _BAILOUT_VALUE,e0
+
 	clr.l   d0			; d0: mark points as "not done" (0)
 	; start
 	move.w  #0,_IterP1	; default value = 0
@@ -280,24 +282,27 @@ _juliapar4iterateasmvert:
 	; check if points are done
 	btst.l  #0,d0		; p1 done?
 	bne   	.contp1		; yes => continue with p2
-	fcmp.s 	#4,e6		; p1>=4?
-	fblt    .contp1		; no => continue
+	;fcmp.s 	#4,e6		; p1>=4?
+	fcmp	e0,e6	
+    fblt    .contp1		; no => continue
 	or.l    #%0001,d0		; mark p1 as done
 	move.w  d1,_IterP1	; store iterations for p1
 .contp1:
 	; ------ p2
 	btst.l  #1,d0		; p2 done?
 	bne   	.contp2		; yes => continue with calculation
-	fcmp.s 	#4,e11		; p2>4?
-	fblt    .contp2		; no => continue
+	;fcmp.s 	#4,e11		; p2>4?
+	fcmp	e0,e11	
+    fblt    .contp2		; no => continue
 	or.l    #%0010,d0		; mark p2 as done
 	move.w  d1,_IterP2	; store iterations for p2
 .contp2:
 	; ------ p3
 	btst.l  #2,d0		; p3 done?
 	bne   	.contp3		; yes => continue with calculation
-	fcmp.s  #4,e16		; p3>4?
-	fblt    .contp3		; no => continue
+	;fcmp.s  #4,e16		; p3>4?
+	fcmp	e0,e16	
+    fblt    .contp3		; no => continue
 	or.l    #%0100,d0		; mark p4 as done
 	move.w  d1,_IterP3	; store iterations for p3
 .contp3:
@@ -305,8 +310,9 @@ _juliapar4iterateasmvert:
 
 	btst.l  #3,d0		; p4 done?
 	bne   	.contp4		; yes => continue with calculation
-	fcmp.s  #4,e21		; p4>4?
-	fblt    .contp4		; no => continue
+	;fcmp.s  #4,e21		; p4>4?
+	fcmp	e0,e21	
+    fblt    .contp4		; no => continue
 	or.l    #%1000,d0		; mark p4 as done
 	move.w  d1,_IterP4	; store iterations for p4
 .contp4:
@@ -355,11 +361,13 @@ _juliapar4iterateasmvert:
 ; ********************************
 
 _Julia68k_FPU_Vampire:
-;	fmovem  fp0-fp6,-(sp)
 	
-	fmove   fp1,e3		; i
+    fmove   fp1,e3		; i
 	fmove   fp0,e2		; r
-
+	fmove.d _BAILOUT_VALUE,e0
+	fmove.d _JKRE,fp0
+    fmove.d _JKIM,fp1
+    
 .loop9:
 	; (1)
 	fmul    e2,e2,e4	; r2=r*r
@@ -368,58 +376,37 @@ _Julia68k_FPU_Vampire:
 	fadd    e4,e5,e6    ; r2+i2
 	fmul    e2,e3		; do this instruction here (for free:)
 	; (3)
-	fcmp.s  #4,e6		; >=4?
-	fbgt    .exit9
+	;fcmp.s  #4,e6		; >=4?
+	fcmp	e0,e6	
+    fbgt    .exit9
 	; (4)
 	fsub    e5,e4,e2
 	fadd    e3,e3
 	; (5)
-	fadd    fp6,e2		; r=r2-i2+x
-	fadd    fp7,e3		; i=2*r*i+y
+	fadd    fp0,e2		; r=r2-i2+x
+	fadd    fp1,e3		; i=2*r*i+y
 	
 	dbra    d0,.loop9
 	clr.l   d0
 	
-;	fmovem  (sp)+,fp0-fp6
 	rts
 	
 .exit9:
 .end9	
 	; d0 = result
-;	fmovem (sp)+,fp0-fp6
 	rts
 	
-_Julia68k_FPU_tested:
-
-.loop:
-        fmul.x  fp1,fp1,fp4
-        fmul.x  fp0,fp1         * zi   =  zr * zi
-        fmul.x  fp0,fp0         * zr   =  zr * zr
-        
-        fadd.x  fp0,fp4,fp5
-        fcmp.s  #4,fp5          * cmp  MaxDist  dist
-        fbgt.w  .exit           * if   dist > MaxDist  exit
-        fadd.x  fp1,fp1         * zi   += zi
-        fsub.x  fp4,fp0         * zr   -= zi2
-        fadd.x  fp7,fp1         * zi   += Jim
-        fadd.x  fp6,fp0         * zr   += Jre
-
-        dbra.w  d0,.loop        * if --Iterations go to Loop
-        ;moveq.l #0,d0           * Iterations = 0
-        clr.l   d0
-.exit:
-        rts                     * return Iterations
-
 ; ***************** original routine
 _Julia68k_FPU_Classic:
-		
+  
         fmove.x fp0,fp2  * Zr = Cre
         fmove.x fp1,fp3  * Zi = Cim
-        fmove.x fp6,fp0  * Moving Julia real constant to fp0
-        fmove.x fp7,fp1  * Moving Julia imag constant to fp1
+        ;fmove.x fp6,fp0  * Moving Julia real constant to fp0
+        ;fmove.x fp7,fp1  * Moving Julia imag constant to fp1
         ;fmove.x #4,fp6   * MaxDist = 4
-		;fmove.x  #4000000000,fp6
-		fmove.d _BAILOUT_VALUE,fp6
+		fmove.d _JKRE,fp0
+        fmove.d _JKIM,fp1		
+        fmove.d _BAILOUT_VALUE,fp6
 Loop:
 
         fmove.x fp3,fp4  * zi2  =  zi

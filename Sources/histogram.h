@@ -2,7 +2,7 @@
 /**************************************************************************************
  *                                                                                    *
  * Histograms can be saved as a raw file or compressed with rle algorithm.            *
- * To avoid any problems in the future, the compressed file conains a header of       *
+ * To avoid any problems in the future, the compressed file contains a header of       *
  * two longwords that identify the compressed data and the algorithm used.            *
  *                                                                                    *
  **************************************************************************************

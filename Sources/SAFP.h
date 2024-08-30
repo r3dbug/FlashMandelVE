@@ -115,22 +115,23 @@ void SAFPVampireMultiFloatBoundaryNoJulia(void);
 
 /******* Buddha **********/
 /* ----- Classic ------- */
+/*
 void SAFPClassicBuddhaBruteWithJulia(void);
 void SAFPClassicBuddhaBruteNoJulia(void);
 void SAFPClassicBuddhaTileWithJulia(void);
 void SAFPClassicBuddhaTileNoJulia(void);
 void SAFPClassicBuddhaBoundaryWithJulia(void);
 void SAFPClassicBuddhaBoundaryNoJulia(void);
-
+*/
 /* ------ Vampire ------- */
-
+/*
 void SAFPVampireBuddhaBruteWithJulia(void);
 void SAFPVampireBuddhaBruteNoJulia(void);
 void SAFPVampireBuddhaTileWithJulia(void);
 void SAFPVampireBuddhaTileNoJulia(void);
 void SAFPVampireBuddhaBoundaryWithJulia(void);
 void SAFPVampireBuddhaBoundaryNoJulia(void);
-
+*/
 /******* Burning Ship **********/
 /* ----- Classic ------- */
 void SAFPClassicBurningShipBruteWithJulia(void);
@@ -194,15 +195,15 @@ void SAFPVampireMultiFloatBoundary(void);
 
 /******* Buddha **********/
 /* ----- Classic ------- */
-void SAFPClassicBuddhaBrute(void);
+/*void SAFPClassicBuddhaBrute(void);
 void SAFPClassicBuddhaTile(void);
 void SAFPClassicBuddhaBoundary(void);
-
+*/
 /* ----- Vampire ------- */
-void SAFPVampireBuddhaBrute(void);
+/*void SAFPVampireBuddhaBrute(void);
 void SAFPVampireBuddhaTile(void);
 void SAFPVampireBuddhaBoundary(void);
-
+*/
 /******* Burning Ship *****/
 /* ----- Classic ------- */
 void SAFPClassicBurningShipBrute(void);
@@ -271,6 +272,7 @@ void SetUpPutPixelWithColorModeFunctions(void);
 /*********************************************************************/
 
 void SAFP(void); 
+void FirstSAFP(void); 
 
 /********************************************************************/
 /*********************************************************************/

@@ -1,9 +1,9 @@
-Short:    Vamped Edition of FlashMandel
-Authors:   Dino Papararo / RedBug aka Marcel Maci (Vampire specific additions)
+Short:    FlashMandel "Vamped Edition" (FMVE)
+Authors:  Dino Papararo (original FlashMandel) / RedBug aka Marcel Maci (FMVE)
 Uploader: RedBug
-Version:  FMVE "BurningShip" BETA V24.4 R21 (April 2024)
+Version:  "BurningShip" (eternal;) BETA V24.6 R23 (June 2024)
 Type:     gfx/fract
-Requires: Amiga with 020/881 or better CPU and Wb/Kick 3.0+ (Vampire V4 recommended)
+Requires: Amiga with 020/881 or better CPU and Wb/Kick 3.0+ (Vampire V2/V4 recommended)
 Replaces: gfx/fract/FlashMandelVE.lha
 
 FlashMandel "BurningShip" Vamped Edition
@@ -69,6 +69,8 @@ Or (easier), by typing:
 smake
 
 in the main folder.
+
+See FlashMandelVE.guide in Docs folder for more information.
 
 Thanks for Dino Papararo for his advice and permission to continue development for this
 new 68k version of FlashMandel.

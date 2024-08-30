@@ -1,4 +1,0 @@
-FROM LIB:c.o "iffp/iff.o"+"iffp/ilbm.o"+"iffp/ilbmapp.o"+"24bitdemo.o"
-TO "iffp/iff"
-LIB LIB:sc.lib LIB:amiga.lib
-

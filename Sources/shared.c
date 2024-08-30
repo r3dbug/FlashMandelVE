@@ -4,56 +4,316 @@
 
 UWORD InterruptDrawing(struct Window*, const LONG,const LONG,const LONG,const LONG);
 BOOL   CheckBox      (struct RastPort *,const LONG,const LONG,const LONG,const LONG);
+ULONG GetCyclePeriod(double *, double *, ULONG, double);
 
-/* General function pointers */
-/*
-ULONG (*MultiMandelInCGeneric)(ULONG, double, double);
-ULONG (*MultiJuliaInCGeneric)(ULONG,double,double);
-ULONG (*BurningShipInCGeneric)(ULONG,double,double);
-ULONG (*FractalInCGeneric)(ULONG,double,double);
-ULONG (*FractalInCGenericStoreIterations)(ULONG,double,double);
-void (*PutPixelWithColorMode)(ULONG, ULONG, ULONG);
-*/
-/* Common global variables (from boundary) */
-/*UWORD* Data; */
-/*extern UBYTE *Data;
-extern UBYTE *Done;
-extern ULONG *Queue;
-extern ULONG DataSize;
-extern ULONG DoneSize;
-extern ULONG QueueSize;
-extern ULONG QueueHead, QueueTail;
-extern ULONG p;
-extern UWORD flag;
-extern struct Window* TempWin;
-extern ULONG resx, resy;
-extern UBYTE* screenbuffer;
+BOOL AllocIterArray(void)
+{
+	if (re) 
+    {
+    	FreeVec(re);
+    	re=NULL;
+    }
+	re = AllocVec(sizeof(double) * MAXITERPERIODICITY, MEMF_FAST | MEMF_CLEAR);
+    
+    if (im) 
+    {
+    	FreeVec(im);
+    	im=NULL;
+    }
+	im = AllocVec(sizeof(double) * MAXITERPERIODICITY, MEMF_FAST | MEMF_CLEAR);
+    
+	if (re && im) return 1;
+    else 
+    {
+		if (re) { FreeVec(re); re=NULL; } 
+        if (im) { FreeVec(im); im=NULL; }
+        return NULL;   
+    }
+}
 
-extern enum { Loaded=1, Queued=2 };
+void FreeIterArray(void)
+{
+	if (re) 
+    {
+    	FreeVec(re);
+    	re=NULL;
+    }
+	if (im) 
+    {
+    	FreeVec(im);
+    	im=NULL;
+    }
+}
 
-*/
+void InitBuddha(void)
+{
+	BUDDHA_DIMENSIONS[0] = 0;
+  	BUDDHA_DIMENSIONS[1] = 0;
+  	BuddhaCounter = NULL; 
+    re=NULL;
+    im=NULL;
+    HAMMap=NULL;
+    edgequeue=NULL;
+    lemniscates=NULL;
+	queue_i=lemni_i=0;
+}
 
 void FreeBuddha(void) 
 {
-	if (BuddhaCounter) FreeVec(BuddhaCounter);  /* Buddha orbit counters (1920x1080 ULONG) */
-	/*if (CompressedBuddhacounter)=FreeVec(CompressedBuddhaCounter);*/
-  	if (re) FreeVec(re);						  /* Array with orbits for periodicity checking */
-  	if (im) FreeVec(im);
+ 	/*printf("FreeBuddha()\n");*/
+    	
+    /* free memory and set all pointers to NULL */
+	if (BuddhaCounter) {
+    	FreeVec(BuddhaCounter); 
+		BuddhaCounter=NULL;	
+    }	
+    
+    if (re) 
+    {	
+    	FreeVec(re);  /* Array with orbits for periodicity checking */
+  		re=NULL;	
+    }	
+  
+    if (im) 
+    {
+    	FreeVec(im);
+		im=NULL;	
+    }	
+
+    if (HAMMap) 
+    {
+    	FreeVec(HAMMap);
+    	HAMMap=NULL;
+    }
+    
+    if (edgequeue) 
+    {
+    	FreeVec(edgequeue);
+    	edgequeue=NULL;
+        queue_i=0;
+    }
+    
+    if (lemniscates) 
+    {
+    	FreeVec(lemniscates);
+    	lemniscates=NULL;
+    	lemni_i=0;
+    }
+    
+    /* set dimensions to 0 */
+    BUDDHA_DIMENSIONS[0]=0;
+    BUDDHA_DIMENSIONS[1]=0;
+}
+
+void FreeHitmap(void)
+{
+	FreeVec(HAMMap);
+    HAMMap=NULL;
+    HITMAP_MEMSIZE=0;
 }
 
 BOOL AllocBuddha(void)
 {
-	BuddhaCounter=AllocVec(sizeof(ULONG)*MAX_NEBULA_WIDTH*MAX_NEBULA_HEIGHT*3, MEMF_FAST); 		/* allocate enough memory for FullHD: 1920x1080 ULONG */
-	/*  CompressedBuddhaCounter=AllocVec(Sizeof(ULONG)*MAX_NEBULA_WIDTH*MAX_NEBULA_HEIGHT*4, MEMF_FAST); /* allocate 33% more space */
-  	re = AllocVec(sizeof(double) * MAXITERPERIODICITY, MEMF_FAST);
-  	im = AllocVec(sizeof(double) * MAXITERPERIODICITY, MEMF_FAST);
-  	SHOW_MAXCOUNTERS = FALSE;
-
-	if ((!BuddhaCounter) || (!re) || (!im))
+	ULONG needed1 = sizeof(ULONG)*3*DD_WIDTH*DD_HEIGHT; /* counters */
+    ULONG needed3 = sizeof(double)*MAXITERPERIODICITY; /* re & im */
+    ULONG needed4 = sizeof(ULONG)*(DD_WIDTH>>HITMAP_SHIFT)*DD_HEIGHT*HITMAP_EXTENSION; /* for HAMMAP - a lot of memory! */
+    ULONG needed5 = DD_WIDTH*DD_HEIGHT*sizeof(ULONG); /* edges+lemniscates => less memory will probably also do ... ;) */
+    UBYTE error=0xff;
+    
+    SHOW_MAXCOUNTERS = FALSE;	/* only for debugging */
+    
+    /*
+    printf("AllocBuddha() - AvailMem: %lu\n", AvailMem( MEMF_LARGEST));
+    printf("USE_HAMMAP: %u needed4: %u\n", USE_HAMMAP, needed4);
+    */
+    
+    /* first check, if BuddhaCounter has already been allocated */	
+    if (BuddhaCounter)
     {
+/*        printf("BuddhaCounter already allocated ...\n");
+        /* if allocated, check if size is sufficient */
+        if (
+        	(BUDDHA_DIMENSIONS[0]>=DD_WIDTH)
+            &&
+            (BUDDHA_DIMENSIONS[1]>=DD_HEIGHT)
+           )
+        {
+        	/* allocated and size is sufficient 
+             * => now check if HAMMap is needed
+                and allocated 
+             */
+/*            printf("Allocated size is sufficient ...\n"); */
+            if (USE_HAMMAP) 
+            {
+/*            	printf("USE_HAMMap is true => check/allocate HAMMap ...\n"); */	
+                if (HAMMap) 
+                { 
+                	/* HAMMap already allocated, but it might be too small */
+                	if (needed4>HITMAP_MEMSIZE)
+                    {
+                		/* existing HAMMap is too small => free and reallocate */
+                        /* printf("HAMMap too small => reallocate...\n"); */
+/*                       printf("Existing HAMMap is too small => free it and reallocate ...\n"); */
+                        FreeVec(HAMMap);
+                        HAMMap=AllocVec(needed4, MEMF_FAST | MEMF_CLEAR);
+                        if (HAMMap)
+                        {
+/*                        	printf("Reallocation of HAMMap successful (Size: old: %lu new: %lu=)\n", HITMAP_MEMSIZE, needed4);
+*/                            HITMAP_MEMSIZE=needed4;
+                            error=FALSE;
+                        } 
+                        else 
+                    	{
+/*                        	printf("Reallocation of HAMMap NOT successful (Size: old: %lu new: %lu)\n", HITMAP_MEMSIZE, needed4);
+*/							HITMAP_MEMSIZE=0;     
+                            error=1;                    
+                        }
+                    }	
+                    else
+                    {
+/*                    	printf("HAMMap already allocated and memsize sufficient (Size: old: %lu new: %lu)\n", HITMAP_MEMSIZE, needed4);
+*/                    	error=FALSE; /* nothing to do => return with success */
+                    }
+                } 
+                else 
+                {
+/*                	printf("No HAMMap allocated => allocate it for the first time...\n");
+*/                	HAMMap=AllocVec(needed4, MEMF_FAST | MEMF_CLEAR);
+                    if (HAMMap) 
+                    { 
+/*                    	printf("HAMMap allocated - size: %u\n", needed4);
+*/                        HITMAP_MEMSIZE=needed4;
+                        error=FALSE; 
+                    } /* allocation HAMMap successful */
+                    else 
+                    { 
+/*                    	printf("HAMMap allocation error\n");
+*/                        HITMAP_MEMSIZE=0; 
+                        error=1; 
+                    }/* allocation of HAMMap failed */
+                }
+            } else error=FALSE; /* no HAMMap needed */
+        	
+            /* check edges & lemniscates */
+            if (BUDDHA_EDGES)
+            {
+          		if (!edgequeue) edgequeue=AllocVec(needed5, MEMF_ANY | MEMF_CLEAR);
+                if (!edgequeue) error=3;
+            }
+            if (BUDDHA_LEMNISCATES)
+            {
+          		if (!lemniscates) lemniscates=AllocVec(needed5, MEMF_ANY | MEMF_CLEAR);
+                if (!lemniscates) error=4;
+            }
+        }
+        else
+        {
+/*           printf("Allocated size is not sufficient => free memory\n");
+*/           /* if size is not sufficient => first free memory */
+           FreeBuddha();
+           /* now allocate new BuddhaCounter */
+/*           printf("Reallocate new memory for Buddha\n");
+*/           BuddhaCounter=AllocVec(needed1, MEMF_FAST| MEMF_CLEAR); 		/* allocate enough memory for FullHD: 1920x1080 ULONG */
+		   if (USE_HAMMAP) 
+           {
+/*           		printf("Reallocate HAMMap because memory for entire Buddha has to be reallocated\n");	
+*/                HAMMap=AllocVec(needed4, MEMF_FAST | MEMF_CLEAR);	
+           }
+           re = AllocVec(needed3, MEMF_FAST | MEMF_CLEAR);
+  		   im = AllocVec(needed3, MEMF_FAST | MEMF_CLEAR);
+    	   
+           /* check edges & lemniscates */
+           if (BUDDHA_EDGES)
+           {
+            	if (!edgequeue) edgequeue=AllocVec(needed5, MEMF_ANY | MEMF_CLEAR);
+           }
+           if (BUDDHA_LEMNISCATES)
+           {
+            	if (!lemniscates) lemniscates=AllocVec(needed5, MEMF_ANY | MEMF_CLEAR);
+           }   
+           
+           /* check if allocation worked */   
+           if ((BuddhaCounter) && (re) && (im))
+           {
+           		if (USE_HAMMAP) 
+                {
+                	if (HAMMap) 
+                    {
+                    	HITMAP_MEMSIZE=needed4;	
+                        error=FALSE;	/* HAMMap needed and allocated */
+               	 	}	
+                    else 
+                    {
+                    	HITMAP_MEMSIZE=0;	
+                        error=1;				/* fail: HAMMap needed but not allocated */
+           			}	
+                } else error=FALSE; /* HAMMap not needed => all good */
+           } 
+           else error=2; /* allocation of main counters failed */     
+    	   if ((BUDDHA_EDGES) && (!edgequeue)) error=3;	
+           if ((BUDDHA_LEMNISCATES) && (!lemniscates)) error=3;	
+        }
+    }	
+    else
+    {
+    	/* if BuddhaCounter has not yet been allocated 
+     	 * => allocate it
+    	 */
+/*     	printf("No memory allocated for Buddha => allocate it for the first time ...\n");
+*/    	BuddhaCounter=AllocVec(needed1, MEMF_FAST| MEMF_CLEAR); 		/* allocate enough memory for FullHD: 1920x1080 ULONG */
+		if (USE_HAMMAP) HAMMap=AllocVec(needed4, MEMF_FAST | MEMF_CLEAR);	
+ 		re = AllocVec(needed3, MEMF_FAST | MEMF_CLEAR);
+  		im = AllocVec(needed3, MEMF_FAST | MEMF_CLEAR);
+   		if (BUDDHA_EDGES) edgequeue=AllocVec(needed5, MEMF_ANY | MEMF_CLEAR);
+ 		if (BUDDHA_LEMNISCATES) lemniscates = AllocVec(needed5, MEMF_ANY | MEMF_CLEAR);
+ 
+    	/* check if allocation worked */   
+    	if ((BuddhaCounter) && (re) && (im))
+    	{
+    		if (USE_HAMMAP) 
+    	    {
+    	       	if (HAMMap) 
+                {
+/*                	printf("HAMMap successfully allocated (for the first time) - size: %u\n", needed4);	
+*/                    HITMAP_MEMSIZE=needed4;	
+                    error=FALSE;	/* HAMMap needed and allocated */
+    	   		}	 	
+                else 
+                {
+/*                	printf("HAMMap allocation FAILED (needed size: %u)\n", needed4);	
+*/                    HITMAP_MEMSIZE=0;	
+                    error=1;				/* HAMMap needed but not allocated */
+    	 		}   
+            } else error=FALSE; /* HAMMap not needed => all good */
+    		
+            if ((BUDDHA_EDGES) && (!edgequeue))
+                error=3; /* edgequeue allocation failed */            
+            if ((BUDDHA_LEMNISCATES) && (!lemniscates))
+                error=4; /* lemniscates allocation failed */  
+        } 
+    	else error=2; /* allocation failed */     
+    }
+    
+    if (!error) 
+    {
+    	/* set dimensions and return success */	
+        BUDDHA_DIMENSIONS[0]=DD_WIDTH;
+        BUDDHA_DIMENSIONS[1]=DD_HEIGHT;
+        /*printf("Success allocation Buddhacounters:\n Error %u\nBuddhaCounter: %p re: %p im: %p HAMMap: %p\nDD_WIDTH: %u DD_HEIGHT: %u (NEBUBLA_WIDTH: %u NEBULA_HEIGHT: %u\n",
+        	error, BuddhaCounter, re, im, HAMMap, DD_WIDTH, DD_HEIGHT, NEBULA_WIDTH, NEBULA_HEIGHT);
+        */
+        return TRUE; 
+    }
+    else 
+    {
+        /* printf("Error %u allocating Buddhacounters ...\nBuddhaCounter: %p re: %p im: %p HAMMap: %p\n",
+        	error, BuddhaCounter, re, im, HAMMap);
+        */
+        /* since insufficient Buddha memory is of no use => free it */
+        /* (dimensions are reset to 0 by FreeBuddha() */
         FreeBuddha();
         return FALSE;
-    } else return TRUE;
+    }
 }
 
 
@@ -65,12 +325,6 @@ LONG lround(double v)
 
 double RenormalizedIterationCount(ULONG i, double fx, double fy, double p)
 {
-	/* i = iterations 
-	   fx = final x (re)
-	   fy = final y (im)
-	   p = power (Mandelbrot = 2, Multibrot = >2)
-	*/
-	
 	double log_zn;
 	double mu, nu;
 	
@@ -147,6 +401,7 @@ void PutPixelWithColorModeRGBSmoothFMNG(ULONG x, ULONG y, ULONG Color)
 	
 }
 
+
 /******************************/
 /* Mandel and Julia functions */
 /******************************/
@@ -156,7 +411,7 @@ ULONG MandelInC(ULONG i, double cx, double cy)
 	double zx, zy, xtemp;
 	zx=cx;
 	zy=cy;
-	while ((i) && (zx*zx+zy*zy<=4)) {
+	while ((i) && (zx*zx+zy*zy<=BAILOUT_VALUE)) {
 		xtemp = zx * zx - zy * zy;
 		zy = 2 * zx * zy + cy;
 		zx = xtemp + cx;
@@ -167,23 +422,18 @@ ULONG MandelInC(ULONG i, double cx, double cy)
 
 ULONG MandelInCStoreIterations(ULONG i, double cx, double cy)
 {
-	double zx, zy, xtemp;
-	zx=cx;
-	zy=cy;
-	while ((i) && (zx*zx+zy*zy<=4)) {
-		xtemp = zx * zx - zy * zy;
-		zy = 2 * zx * zy + cy;
-		zx = xtemp + cx;
-		re[i]=zx;
-		im[i]=zy;
-		i--;
-	}	
-	return i;
+    /* this is a simple C2ASM wrapper for the moment */
+    /* to do it properly, main fractal iteration function pointer would have to be the
+       same (pointer to asm function) for all functions (not possible as long as there are
+       C functions remaining (..)).
+     */
+     
+    return Mandel68k_FPU_Classic_SI(i,cx,cy);
 }
 
 ULONG JuliaInC(ULONG i, double zx, double zy, double cx, double cy) {
 double xtemp;
-	while ((i) && (zx*zx+zy*zy<=4)) {
+	while ((i) && (zx*zx+zy*zy<=BAILOUT_VALUE)) {
 		xtemp = zx * zx - zy * zy;
 		zy = 2 * zx * zy + cy;
 		zx = xtemp + cx;
@@ -201,7 +451,7 @@ double xtemp, ax, ay, ox, oy, cx, cy;
 	ax = 0;
 	ay = 0;
 	
-	while ((i) && (ax*ax+ay*ay<=4))
+	while ((i) && (ax*ax+ay*ay<=BAILOUT_VALUE))
 	{
 /* this is the working Multibrot formula */
 /*	
@@ -242,8 +492,8 @@ double xtemp, ax, ay, ox, oy, cx, cy;
 	cy = zy;
 	ax = 0;
 	ay = 0;
-	
-	while ((i) && (ax*ax+ay*ay<=4))
+	 
+	while ((i) && (ax*ax+ay*ay<=BAILOUT_VALUE))
 	{
 		ox=ax;
 		oy=ay;
@@ -280,7 +530,7 @@ double xtemp, ax, ay, ox, oy, cx, cy;
 	ax = zx;
 	ay = zy;
 	
-	while ((i) && (ax*ax+ay*ay<=4))
+	while ((i) && (ax*ax+ay*ay<=BAILOUT_VALUE))
 	{
 		ox=ax;
 		oy=ay;
@@ -317,7 +567,7 @@ double ax, ay, cx, cy, powvar, ax2ay2, patan2ayax;
 	p = MultiPowerFloat;
 	p2 = p/2.0;
 
-	while ((i) && ((ax2ay2=ax*ax+ay*ay)<=4))
+	while ((i) && ((ax2ay2=ax*ax+ay*ay)<=BAILOUT_VALUE))
 	{
 		/* slightly optimized with some assembly */
 		/* patan2ayax=p*atan2(ay,ax); */
@@ -352,44 +602,23 @@ UBYTE isperiodic;
 	p = MultiPowerFloat;
 	p2 = p/2.0;
 	
-	re[i]=ax;
-	im[i]=ay;
-	
-	tortoise=i;
+    tortoise=i;
 	hare=i-1;
 	isperiodic=0;
-	
-	while ((i) && (!isperiodic) && ((ax2ay2=ax*ax+ay*ay)<=4))
+    
+	while ((i) /*&& (!isperiodic) */ && ((ax2ay2=ax*ax+ay*ay)<=BAILOUT_VALUE))
 	{
-		/* patan2ayax=p*atan2(ay,ax); */
-		patan2ayax=p*atan2C(ax,ay);
-		/* patan2ayax=p*atan2FPU(ax,ay); */
-	
-		/* powvar = pow((ax2ay2),p2); */
-		powvar = powFPU(ax2ay2,p2);
-/*
-		// not faster than single calls to sin / cos
-		sincosFPU(patan2ayax,patan2ayax);		
-		ax = powvar * GlobalCOS + cx;
-		ay = powvar * GlobalSIN + cy;
-*/
+		patan2ayax=p*atan2C(ax,ay);		/* 31.61 */
+        
+		powvar = pow((ax2ay2),p2); 
 		
 		ax = powvar * cos(patan2ayax) + cx;
 		ay = powvar * sin(patan2ayax) + cy;
 
-/*
-		patan2ayax=p*atan2andpowFPU(ax,ay,ax2ay2,p2);
-		ax = GlobalPowerVar * cos(patan2ayax) + cx;
-		ay = GlobalPowerVar * sin(patan2ayax) + cy;
-*/
-		/*i--;*/
-		
-		re[i]=ax;
-		im[i]=ay;
-		
 		i--;
-		
-		if (i==hare) 
+
+/* periodicity checking disabled for the moment */		
+/*		if (i==hare) 
 		{
 			if (
 				IdenticalWithEpsilon(re[hare],re[tortoise])
@@ -399,17 +628,17 @@ UBYTE isperiodic;
 			{
 				/*printf("periodicity detected: tortoise[%d]: (%f,%f) <==> hare[%d]: (%f,%f)\n", tortoise, re[tortoise], im[tortoise], hare, re[hare], im[hare]);
 				*/
-				isperiodic=1;
+/*				isperiodic=1;
 				if (PeriodicityColoring) i=hare; /* i=0;  // tortoise-hare; */
-				else i=0; /* early bailout */
-			}
+/*				else i=0; /* early bailout */
+/*			}
 			else 
 			{
 				hare-=2;
 				tortoise-=1;
 			}	
 		}
-
+/* end of disabled periodicity checking */
 	}
 	
 	FinalXP1 = ax;
@@ -440,31 +669,15 @@ UBYTE isperiodic;
 	isperiodic=0;
 	
 	/* disable periodicity checking for orbits display */
-	while ((i) && /*(!isperiodic) &&*/ ((ax2ay2=ax*ax+ay*ay)<=4))
+	while ((i) && /*(!isperiodic) &&*/ ((ax2ay2=ax*ax+ay*ay)<=BAILOUT_VALUE))
 	{
-		/* patan2ayax=p*atan2(ay,ax); */
 		patan2ayax=p*atan2C(ax,ay);
-		/* patan2ayax=p*atan2FPU(ax,ay); */
-	
-		/* powvar = pow((ax2ay2),p2); */
+		
 		powvar = powFPU(ax2ay2,p2);
-/*
-		// not faster than single calls to sin / cos
-		sincosFPU(patan2ayax,patan2ayax);		
-		ax = powvar * GlobalCOS + cx;
-		ay = powvar * GlobalSIN + cy;
-*/
 		
 		ax = powvar * cos(patan2ayax) + cx;
 		ay = powvar * sin(patan2ayax) + cy;
 
-/*
-		patan2ayax=p*atan2andpowFPU(ax,ay,ax2ay2,p2);
-		ax = GlobalPowerVar * cos(patan2ayax) + cx;
-		ay = GlobalPowerVar * sin(patan2ayax) + cy;
-*/
-		/*i--;*/
-		
 		re[i]=ax;
 		im[i]=ay;
 		
@@ -511,89 +724,44 @@ UBYTE isperiodic;
 
 ULONG DrawMultiMandelFractalBrute (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
-ULONG Color;
-ULONG StartSec = NULL , EndSec = NULL , /*Dummy = NULL,*/ StartMicro, EndMicro;
-double cx,cy;
-WORD x, y;
-double power;
-
- /*printf("DrawMultiMandelFractalBrute()\n");*/
- 
-/* printf("Calculating MultiMandel Brute with Power: %d\n", MultiPower); */
-
- CurrentTime (&StartSec,&StartMicro);
+ ULONG Color;
+ double cx,cy;
+ WORD x, y;
+ double power;
 
  power = (FractalType==MULTIFLOAT) ? MultiPowerFloat : MultiPower;
- 
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
 
  GlobalP = (FractalType == MULTIINT) ? MultiPower : MultiPowerFloat; 
-
- /* ShowData("BRUTE (MANDEL)", a1,b1,a2,b2); */
 
  if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
 
 	for (y=b1; y<=b2; y++) {
 		for (x=a1; x<=a2; x++) {
 		 
-			cy = IMAX-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
+			cy = IMAX-y*INCREMIMAG;  /* FlashMandel is upside down (..) */
 			cx = x*INCREMREAL+RMIN;	
 			
 			Color=MultiMandelInCGeneric(ITERATIONS,cx,cy);
-			/* Color=MultiMandelInC(ITERATIONS,cx,cy); */
-/*
-if (Color)
-{
-     	Color *= CURRENT_MAX_COLORS,
 
-        Color /= ITERATIONS,
-
-   	   	Color += RESERVED_PENS;
-}
-*/			PutPixelWithColorMode(x,y,Color);
-
+			PutPixelWithColorMode(x,y,Color);
 		}
 		/* give user possibility to interrupt calculation each line */
 		if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
 	}
 
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&EndMicro);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
-
-/*
- printf("StartMicro: %ul EndMicro: %ul\n",StartMicro,EndMicro);
- return (EndMicro-StartMicro);
-*/
+ return 0;
 }
 
 /* (1d) MultiJulia */
 
 ULONG DrawMultiJuliaFractalBrute (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
-ULONG Color;
-ULONG StartSec = NULL , EndSec = NULL , /*Dummy = NULL,*/ StartMicro, EndMicro;
-double cx,cy;
-WORD x, y;
-double power;
-
- CurrentTime (&StartSec,&StartMicro);
+ ULONG Color;
+ double cx,cy;
+ WORD x, y;
+ double power;
 
  power = (FractalType==MULTIFLOAT) ? MultiPowerFloat : MultiPower;
- 
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
 
  GlobalP = (FractalType == MULTIINT) ? MultiPower : MultiPowerFloat; 
  
@@ -602,7 +770,7 @@ double power;
 	for (y=b1; y<=b2; y++) {
 		for (x=a1; x<=a2; x++) {
 		 
-			cy = IMAX-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
+			cy = IMAX-y*INCREMIMAG;  /* FlashMandel is upside down (..) */
 			cx = x*INCREMREAL+RMIN;	
 			
 			Color=MultiJuliaInCGeneric(ITERATIONS,cx,cy);
@@ -614,18 +782,7 @@ double power;
 		if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
 	}
 
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&EndMicro);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
-
-/*
- printf("StartMicro: %ul EndMicro: %ul\n",StartMicro,EndMicro);
- return (EndMicro-StartMicro);
-*/
+ return 0; 
 }
 
 /* 1e) burning ship */
@@ -640,7 +797,7 @@ double xn, yn, cx, cy, xtemp;
 	cx = x;
 	cy = -y;   /* flip it around, because otherwise ship will be upside down ... */
 	
-	while ((i) && (xn*xn + yn*yn < 4))
+	while ((i) && (xn*xn + yn*yn < BAILOUT_VALUE))
 	{
 		xtemp = xn*xn - yn*yn + cx;
 		yn = fabs(2.0*xn*yn) + cy;
@@ -660,7 +817,7 @@ ULONG BurningShipInCStoreIterations(ULONG i, double x, double y)
 	cx = x;
 	cy = -y;   /* flip it around, because otherwise ship will be upside down ... */
 	
-	while ((i) && (xn*xn + yn*yn < 4))
+	while ((i) && (xn*xn + yn*yn < BAILOUT_VALUE))
 	{
 		xtemp = xn*xn - yn*yn + cx;
 		yn = fabs(2.0*xn*yn) + cy;
@@ -690,7 +847,7 @@ double xn, yn, cx, cy, xtemp;
 	cx = JKRE;
 	cy = -JKIM;   /* flip it around, because otherwise ship will be upside down ... */
 	
-	while ((i) && (xn*xn + yn*yn < 4))
+	while ((i) && (xn*xn + yn*yn < BAILOUT_VALUE))
 	{
 		xtemp = xn*xn - yn*yn + cx;
 		yn = fabs(2.0*xn*yn) + cy;
@@ -706,18 +863,9 @@ double xn, yn, cx, cy, xtemp;
 
 ULONG DrawBurningShipFractalBrute (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
-ULONG Color;
-ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
-double cx,cy;
-WORD x, y;
-
- CurrentTime (&StartSec,&Dummy);
-
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
+ ULONG Color;
+ double cx,cy;
+ WORD x, y;
 
  GlobalP = 2.0;
  
@@ -726,7 +874,7 @@ WORD x, y;
 	for (y=b1; y<=b2; y++) {
 		for (x=a1; x<=a2; x++) {
 		 
-			cy = IMAX-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
+			cy = IMAX-y*INCREMIMAG;  /* FlashMandel is upside down (..) */
 			cx = x*INCREMREAL+RMIN;	
 			
 			Color=BurningShipInCGeneric(ITERATIONS,cx,cy);
@@ -738,18 +886,12 @@ WORD x, y;
 		if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
 	}
 
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&Dummy);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
-
+ return 0; 
 }
 
 /* Tricorn */
-
+/* the following 2 functions are not used */
+/*
 ULONG TricornInC(ULONG i, double x, double y)
 {
 double xn, yn, cx, cy, xtemp;
@@ -760,7 +902,7 @@ double xn, yn, cx, cy, xtemp;
 	cx = x;
 	cy = y;   
 	
-	while ((i) && (xn*xn + yn*yn < 4))
+	while ((i) && (xn*xn + yn*yn < BAILOUT_VALUE))
 	{
 		xtemp = xn*xn - yn*yn + cx;
 		yn = -2.0*xn*yn + cy;
@@ -774,21 +916,13 @@ double xn, yn, cx, cy, xtemp;
 	return i;
 }
 
+
 ULONG DrawTricornFractalBrute (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
-ULONG Color;
-ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
-double cx,cy;
-WORD x, y;
-
- CurrentTime (&StartSec,&Dummy);
-
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
-
+ ULONG Color;
+ double cx,cy;
+ WORD x, y;
+ 
  GlobalP = 2.0;
  
  if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
@@ -797,7 +931,7 @@ WORD x, y;
 		for (x=a1; x<=a2; x++) {
 		 
 			cy = IMAX-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
-			cx = x*INCREMREAL+RMIN;	
+/*			cx = x*INCREMREAL+RMIN;	
 			
 			Color=TricornInC(ITERATIONS,cx,cy);
 			
@@ -805,19 +939,12 @@ WORD x, y;
 			
 		}
 		/* give user possibility to interrupt calculation each line */
-		if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
+/*		if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
 	}
 
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&Dummy);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
-
+ return 0; 
 }
-
+*/
 /**********************************************************************************************/
 /********************************** TILING ****************************************************/
 /**********************************************************************************************/
@@ -837,12 +964,6 @@ LONG helpx,helpy;
   
   if (CheckBox (Win->RPort,a1,b1,a2,b2))
   {
-/* 
-	 SetAPen (Win->RPort,ReadPixel (Win->RPort,a1,b1));
-
-     RectFill (Win->RPort,a1+1L,b1+1L,a2-1L,b2-1L);
-*/	 
-
 	 RectColorFill(Win->RPort,a1+1L,b1+1L,a2-1L,b2-1L,GetPixelPen(a1,b1));
 	 
      return FALSE;
@@ -885,37 +1006,29 @@ LONG helpx,helpy;
 
 ULONG DrawFractalTiling (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
-ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
+  INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
 
- CurrentTime (&StartSec,&Dummy);
+  INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
 
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
+  ITERATIONS = MAX_ITERATIONS + 1;
 
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
+  if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
 
- ITERATIONS = MAX_ITERATIONS + 1;
+  (*H_LINE) (Win->RPort,a1,a2-a1+1,b1);
 
- /*ShowData*/ /*printf("shared.c: TILING", a1,b1,a2,b2); */
+  (*V_LINE) (Win->RPort,b1+1,b2-1,a2);
 
- if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
+  (*H_LINE) (Win->RPort,a1,a2-a1+1,b2);
 
- (*H_LINE) (Win->RPort,a1,a2-a1+1,b1);
+  (*V_LINE) (Win->RPort,b1+1,b2-1,a1);
 
- (*V_LINE) (Win->RPort,b1+1,b2-1,a2);
+  RectangleDraw (Win,a1,b1,a2,b2);
 
- (*H_LINE) (Win->RPort,a1,a2-a1+1,b2);
+  if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
 
- (*V_LINE) (Win->RPort,b1+1,b2-1,a1);
+  DisplayBeep (Win->WScreen);
 
- RectangleDraw (Win,a1,b1,a2,b2);
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&Dummy);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
+  return 0; 
 }
 
 /* Multibrot => needs separate functions */
@@ -924,22 +1037,22 @@ ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
 
 void MMHLine (struct RastPort *Rp,const LONG a1,const LONG width,const LONG y)
 {
-REGISTER LONG x;
-
-REGISTER UBYTE *TmpArray;
-
-REGISTER ULONG Color;
+  REGISTER LONG x;
  
- x = width;
+  REGISTER UBYTE *TmpArray;
 
- CRE = RMIN + (((double) a1) * INCREMREAL);
+  REGISTER ULONG Color;
+ 
+  x = width;
 
- TmpArray = PixelLine;
+  CRE = RMIN + (((double) a1) * INCREMREAL);
 
- CIM = IMAX - (((double)  y) * INCREMIMAG);
+  TmpArray = PixelLine;
 
- while (x--)
- {
+  CIM = IMAX - (((double)  y) * INCREMIMAG);
+
+  while (x--)
+  {
      Color = MultiMandelInCGeneric (MAX_ITERATIONS+1,CRE,CIM);
 
      if (Color)
@@ -954,9 +1067,9 @@ REGISTER ULONG Color;
      CRE += INCREMREAL;
 
      *TmpArray++ = Color;
- }
+  }
 
- WritePixelLine/* 8 */ (Rp, a1, y, width, PixelLine, &TempRP);
+  WritePixelLine (Rp, a1, y, width, PixelLine, &TempRP);
 }
 
 /* (2ab) Vertical */
@@ -992,18 +1105,18 @@ ULONG Color;
 
 void MJHLine (struct RastPort *Rp,const LONG a1,const LONG width,const LONG y)
 {
-REGISTER LONG x = width;
+  REGISTER LONG x = width;
 
-UBYTE *TmpArray = PixelLine;
+  UBYTE *TmpArray = PixelLine;
 
-ULONG Color;
+  ULONG Color;
 
- CRE = RMIN + (((double) a1) * INCREMREAL);
+  CRE = RMIN + (((double) a1) * INCREMREAL);
 
- CIM = IMAX - (((double)  y) * INCREMIMAG);
+  CIM = IMAX - (((double)  y) * INCREMIMAG);
 
- while (x--)
- {
+  while (x--)
+  {
      Color = MultiJuliaInCGeneric (MAX_ITERATIONS+1,CRE,CIM);
 
      if (Color)
@@ -1018,26 +1131,26 @@ ULONG Color;
      CRE += INCREMREAL;
 
      *TmpArray++ = Color;
- }
- WritePixelLine/*8*/ (Rp, a1, y, width, PixelLine, &TempRP);
+  }
+  WritePixelLine (Rp, a1, y, width, PixelLine, &TempRP);
 }
 
 /* (3bb) Vertical */
 
 void MJVLine (struct RastPort *Rp,const LONG b1,const LONG b2,const LONG x)
 {
-REGISTER LONG y;
+  REGISTER LONG y;
 
-ULONG Color;
+  ULONG Color;
 
- CRE = RMIN + (((double)  x) * INCREMREAL);
+   CRE = RMIN + (((double)  x) * INCREMREAL);
 
- CIM = IMAX - (((double) b2) * INCREMIMAG);
+   CIM = IMAX - (((double) b2) * INCREMIMAG);
 
- for (y = b2; y >= b1; y--)
- {
+  for (y = b2; y >= b1; y--)
+  {
      Color = MultiJuliaInCGeneric (MAX_ITERATIONS+1,CRE,CIM);
-
+    
      if (Color)
      {
         Color *= CURRENT_MAX_COLORS,
@@ -1049,7 +1162,7 @@ ULONG Color;
 	 PutPixel(x,y,Color);
 	 
      CIM += INCREMIMAG;
- }
+  }
 }
 
 
@@ -1059,22 +1172,22 @@ ULONG Color;
 
 void BSHLine (struct RastPort *Rp,const LONG a1,const LONG width,const LONG y)
 {
-REGISTER LONG x;
+  REGISTER LONG x;
 
-REGISTER UBYTE *TmpArray;
+  REGISTER UBYTE *TmpArray;
 
-REGISTER ULONG Color;
+  REGISTER ULONG Color;
  
- x = width;
+  x = width;
 
- CRE = RMIN + (((double) a1) * INCREMREAL);
+  CRE = RMIN + (((double) a1) * INCREMREAL);
+ 
+  TmpArray = PixelLine;
 
- TmpArray = PixelLine;
+  CIM = IMAX - (((double)  y) * INCREMIMAG);
 
- CIM = IMAX - (((double)  y) * INCREMIMAG);
-
- while (x--)
- {
+  while (x--)
+  {
      Color = BurningShipInCGeneric (MAX_ITERATIONS+1,CRE,CIM);
 
      if (Color)
@@ -1089,25 +1202,25 @@ REGISTER ULONG Color;
      CRE += INCREMREAL;
 
      *TmpArray++ = Color;
- }
+  }
 
- WritePixelLine/*8*/ (Rp, a1, y, width, PixelLine, &TempRP);
+  WritePixelLine (Rp, a1, y, width, PixelLine, &TempRP);
 }
 
 /* (4ab) Vertical */
 
 void BSVLine (struct RastPort *Rp,const LONG b1,const LONG b2,const LONG x)
 {
-REGISTER LONG y;
+  REGISTER LONG y;
 
-ULONG Color;
+  ULONG Color;
 
- CRE = RMIN + (((double)  x) * INCREMREAL);
+  CRE = RMIN + (((double)  x) * INCREMREAL);
 
- CIM = IMAX - (((double) b2) * INCREMIMAG);
+  CIM = IMAX - (((double) b2) * INCREMIMAG);
  
- for (y = b2; y >= b1; y--)
- {
+  for (y = b2; y >= b1; y--)
+  {
      Color = BurningShipInCGeneric (MAX_ITERATIONS+1,CRE,CIM);
      if (Color)
      {
@@ -1118,13 +1231,9 @@ ULONG Color;
         Color += RESERVED_PENS;
      }
 	 PutPixel(x,y,Color);     
-	 /*
-     SetAPen (Rp,Color);
 
-     WritePixel (Rp,x,y);
-	 */
      CIM += INCREMIMAG;
- }
+  }
 }
 
 
@@ -1136,40 +1245,70 @@ ULONG Color;
 
 /* Memory allocation */
 int AllocateBoundary(void) {
-    DataSize=sizeof(UWORD)*resx*resy;  /* reserve words for 0xffff iterations */
-    DoneSize=sizeof(UBYTE)*resx*resy;
-    QueueSize=sizeof(ULONG)*((resx*resy)*4);
-    Data=AllocMem(DataSize, MEMF_PUBLIC | MEMF_CLEAR); 
-    Done=AllocMem(DoneSize, MEMF_PUBLIC | MEMF_CLEAR);
-    Queue=AllocMem(QueueSize, MEMF_PUBLIC | MEMF_CLEAR);
+
+    /* check if boundary has already been allocated */
+    /* => this can occur when a previous calculation was interrupted */
+
+    if ((Done!=NULL) || (Queue!=NULL)) 
+    {
+    	/*printf("Interrupted calculation => first deallocate boundary queue ...\n");*/
+    	DeallocateBoundary();
+    }
+    
+    /* calculate size and allocate */
+    DataSize=sizeof(UWORD)*(DD_WIDTH*DD_HEIGHT);  /* reserve words for 0xffff iterations */
+    DoneSize=sizeof(UBYTE)*(DD_WIDTH*DD_HEIGHT);
+    QueueSize=sizeof(ULONG)*((DD_WIDTH*DD_HEIGHT)*4);
+    Data=AllocVec(DataSize, MEMF_PUBLIC | MEMF_CLEAR); 
+    Done=AllocVec(DoneSize, MEMF_PUBLIC | MEMF_CLEAR);
+    Queue=AllocVec(QueueSize, MEMF_PUBLIC | MEMF_CLEAR);
+
+    /* return success */
     if ((Data==NULL) || (Done==NULL) || (Queue==NULL)) return 0;
     else return 1;
 }
 
 void DeallocateBoundary(void) {
     if (Queue) {
-		FreeMem(Queue,QueueSize);
+		FreeVec(Queue);
+        Queue=NULL;
 	}
     if (Done) {
-		FreeMem(Done,DoneSize);
-	}
+		FreeVec(Done);
+    	Done=NULL; 
+    }
     if (Data) {
-		FreeMem(Data,DataSize); 
-	}
+		FreeVec(Data); /* Data pointer needs more investigation ... */
+    	Data=NULL;	
+    }
 }
 
 /* Build the queue */
 void AddQueue(unsigned p) {
+    
     if(Done[p] & Queued) return;
     Done[p] |= Queued;
     Queue[QueueHead++] = p;
     if(QueueHead == QueueSize) QueueHead = 0;
 }
 
+void ClearHAMMap(void)
+{
+  	ULONG i;
+    
+    if (HAMMap)
+    {
+    	for (i=0; i<(DD_WIDTH>>HITMAP_SHIFT)*DD_HEIGHT*HITMAP_EXTENSION; i++)
+    	{
+    		HAMMap[i]=0;
+        }
+	}
+}
+
 void ClearBoundaryBuffers(void) 
 {
 	ULONG p;
-	for (p=0;p<resx*resy; p++)
+    for (p=0;p<resx*resy; p++)
 	{
 		Data[p]=0;
 		Done[p]=0;	
@@ -1179,130 +1318,16 @@ void ClearBoundaryBuffers(void)
 /* (3a) Mandelbrot */
 /* (3b) Julia */
 /* (3c) MultiMandel */
-
-UWORD LoadMultiMandel(ULONG p) {
-    UWORD x,y;
-	ULONG Color, i;
-	double cx, cy;
-
-    if(Done[p] & Loaded) return Data[p];
-    x = p % resx;
-    y = p / resx;
-	
-	cy = IMAX-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
-	cx = x*INCREMREAL+RMIN;	
-    
-	Color = i = MultiMandelInCGeneric(ITERATIONS,cx,cy);
-	
-	if (Color)
-    {
-     	Color *= CURRENT_MAX_COLORS,
-
-        Color /= ITERATIONS,
-
-   	   	Color += RESERVED_PENS;
-    }
-	PutPixel(x,y,Color);
-		
-    Done[p] |= Loaded;
-	return Data[p] = Color;
-}
-
-void ScanMultiMandel(ULONG p) {
-    UWORD x = p % resx, y = p / resx;
-    UWORD center = LoadMultiMandel(p);
-    UWORD ll = x >= 1, rr = x < resx-1;
-    UWORD uu = y >= 1, dd = y < resy-1;
-    UWORD l, r, u, d; 
-	/* booleans */
-   	l=ll && (LoadMultiMandel(p-1) != center);
-    r=rr && (LoadMultiMandel(p+1) != center);
-    u=uu && (LoadMultiMandel(p-resx) != center);
-    d=dd && (LoadMultiMandel(p+resx) != center);
-    /* process the queue (which is actually a ring buffer) */
-    if (l) AddQueue(p-1);
-    if (r) AddQueue(p+1);
-    if (u) AddQueue(p-resx);
-    if (d) AddQueue(p+resx);
-    /* the corner pixels (nw,ne,sw,se) are also neighbors */
-    if((uu&&ll)&&(l||u)) AddQueue(p-resx-1);
-    if((uu&&rr)&&(r||u)) AddQueue(p-resx+1);
-    if((dd&&ll)&&(l||d)) AddQueue(p+resx-1);
-    if((dd&&rr)&&(r||d)) AddQueue(p+resx+1);
-}
-
-ULONG DrawMultiMandelFractalBoundary (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
-{
-ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
-UWORD x, y;
-
- /*printf("DrawMultiMandelFractalBoundary()\n");*/
- 
- CurrentTime (&StartSec,&Dummy);
-
- screenbuffer=GetBitMapPtr(Win->RPort->BitMap);
- 
- resx=a2-a1+1;
- resy=b2-b1+1;
- 
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
-
-	TempWin = Win;
-	
-	/* allocation check */
-	if (!AllocateBoundary()) return 0;
-    
-	/* (1) begin by adding the screen edges into the queue */
-    for(y=0; y<resy; ++y) {
-        AddQueue(y*resx /*+ 0*/);
-        AddQueue(y*resx + (resx-1));
-    }
-    for(x=1; x<resx-1; ++x) {
-        AddQueue(/*0*Width* +*/ x);
-        AddQueue((resy-1)*resx + x);
-    }
-	/* for Multi: add also middle lines */
-	for(y=1; y<resy-1; ++y) {
-        AddQueue(y*resx + resx/2);
-    }
-    for(x=1; x<resx-1; ++x) {
-        AddQueue((resy/2)*resx + x);
-    }
-	
-	/* (2) process the queue (which is actually a ring buffer) */
-    flag=0;
-    while(QueueTail != QueueHead) {
-        if(QueueHead <= QueueTail || ++flag & 3) {
-            p = Queue[QueueTail++];
-            if(QueueTail == QueueSize) QueueTail=0;
-        } else p = Queue[--QueueHead];
-        ScanMultiMandel(p);
-	    if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
-	}
-		
-	/* (3) lastly, fill uncalculated areas with neighbor color */
-	FillUncalculatedAreas();
-
-	DeallocateBoundary();
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&Dummy);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
-}
-
 /* (3d) MultiJulia */
+/* 1d) Burning ship */
 
-UWORD LoadMultiJulia(ULONG p) {
+/******************************/
+/* Generic Boundary functions */
+/******************************/
+
+ULONG (*FractalIterationGeneric)(ULONG,double,double);
+
+UWORD LoadFractalGeneric(ULONG p) {
     UWORD x,y;
 	ULONG Color, i;
 	double cx, cy;
@@ -1311,10 +1336,10 @@ UWORD LoadMultiJulia(ULONG p) {
     x = p % resx;
     y = p / resx;
 	
-	cy = IMAX-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
+	cy = IMAX-y*INCREMIMAG;  /* FlashMandel is upside down (..) */
 	cx = x*INCREMREAL+RMIN;	
     
-	Color = i = MultiJuliaInCGeneric(ITERATIONS,cx,cy);
+	Color = i = FractalIterationGeneric(ITERATIONS,cx,cy);
 	
 	if (Color)
     {
@@ -1325,22 +1350,22 @@ UWORD LoadMultiJulia(ULONG p) {
    	   	Color += RESERVED_PENS;
     }
 	PutPixel(x,y,Color);
-		
+	
     Done[p] |= Loaded;
 	return Data[p] = Color;
 }
 
-void ScanMultiJulia(ULONG p) {
+void ScanFractalGeneric(ULONG p) {
     UWORD x = p % resx, y = p / resx;
-    UWORD center = LoadMultiJulia(p);
+    UWORD center = LoadFractalGeneric(p);
     UWORD ll = x >= 1, rr = x < resx-1;
     UWORD uu = y >= 1, dd = y < resy-1;
     UWORD l, r, u, d; 
 	/* booleans */
-   	l=ll && (LoadMultiJulia(p-1) != center);
-    r=rr && (LoadMultiJulia(p+1) != center);
-    u=uu && (LoadMultiJulia(p-resx) != center);
-    d=dd && (LoadMultiJulia(p+resx) != center);
+   	l=ll && (LoadFractalGeneric(p-1) != center);
+    r=rr && (LoadFractalGeneric(p+1) != center);
+    u=uu && (LoadFractalGeneric(p-resx) != center);
+    d=dd && (LoadFractalGeneric(p+resx) != center);
     /* process the queue (which is actually a ring buffer) */
     if (l) AddQueue(p-1);
     if (r) AddQueue(p+1);
@@ -1353,26 +1378,14 @@ void ScanMultiJulia(ULONG p) {
     if((dd&&rr)&&(r||d)) AddQueue(p+resx+1);
 }
 
-ULONG DrawMultiJuliaFractalBoundary (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
+ULONG DrawFractalBoundaryGeneric (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
-ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
-UWORD x, y;
-
- CurrentTime (&StartSec,&Dummy);
-
- /* screenbuffer=Win->RPort->BitMap->Planes[0]; */ /* 20230406 */
- screenbuffer=GetBitMapPtr(Win->RPort->BitMap);
+ UWORD x, y;
+ 
+ /*Data=*/screenbuffer=GetBitMapPtr(Win->RPort->BitMap);
  
  resx=a2-a1+1;
  resy=b2-b1+1;
- 
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
-
- /* ShowData("BOUNDARY (MANDEL)", a1,b1,a2,b2); */
  
  if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
 
@@ -1380,24 +1393,31 @@ UWORD x, y;
 	
 	/* allocation check */
 	if (!AllocateBoundary()) return 0;
-    
+ 
 	/* (1) begin by adding the screen edges into the queue */
+    /* vertical */
     for(y=0; y<resy; ++y) {
         AddQueue(y*resx /*+ 0*/);
         AddQueue(y*resx + (resx-1));
     }
-    for(x=1; x<resx-1; ++x) {
+    /* horizontal */
+    for(x=1; x<resx-2; ++x) {
         AddQueue(/*0*Width* +*/ x);
         AddQueue((resy-1)*resx + x);
     }
-	/* for Multi: add also middle lines */
-	for(y=1; y<resy-1; ++y) {
-        AddQueue(y*resx + resx/2);
+    
+    /* add also middle lines */
+    for(y=1; y<resy-1; ++y) {
+	        AddQueue(y*resx + resx/2);
+	}
+	for(x=1; x<resx-1; ++x) {
+		 AddQueue((resy>>1)*resx + x);        
+         /*   
+            AddQueue((resy/3)*resx + x);
+            AddQueue((resy/3*2)*resx + x);
+		 */	
     }
-    for(x=1; x<resx-1; ++x) {
-        AddQueue((resy/2)*resx + x);
-    }
-	
+    	
 	/* (2) process the queue (which is actually a ring buffer) */
     flag=0;
     while(QueueTail != QueueHead) {
@@ -1405,148 +1425,17 @@ UWORD x, y;
             p = Queue[QueueTail++];
             if(QueueTail == QueueSize) QueueTail=0;
         } else p = Queue[--QueueHead];
-        ScanMultiJulia(p);
+        ScanFractalGeneric(p);
 	    if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
 	}
 		
 	/* (3) lastly, fill uncalculated areas with neighbor color */
-	FillUncalculatedAreas();
+	if (BOUNDARY_FILL) FillUncalculatedAreas();
 
-	DeallocateBoundary();
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&Dummy);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
+	if (FractalType!=BUDDHA) DeallocateBoundary();
+ 	/* else printf("No DeallocateBoundary() => FractalType==BUDDHA\n"); */
+ 	return 0; 
 }
-
-/* 1d) Burning ship boundary */
-
-UWORD LoadBurningShip(ULONG p) {
-    UWORD x,y;
-	ULONG Color, i;
-	double cx, cy;
-
-    if(Done[p] & Loaded) return Data[p];
-    x = p % resx;
-    y = p / resx;
-	
-	cy = IMAX-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
-	cx = x*INCREMREAL+RMIN;	
-    
-	Color = i = BurningShipInCGeneric(ITERATIONS,cx,cy);
-	
-	if (Color)
-    {
-     	Color *= CURRENT_MAX_COLORS,
-
-        Color /= ITERATIONS,
-
-   	   	Color += RESERVED_PENS;
-    }
-	PutPixel(x,y,Color);
-		
-    Done[p] |= Loaded;
-	return Data[p] = Color;
-}
-
-void ScanBurningShip(ULONG p) {
-    UWORD x = p % resx, y = p / resx;
-    UWORD center = LoadBurningShip(p);
-    UWORD ll = x >= 1, rr = x < resx-1;
-    UWORD uu = y >= 1, dd = y < resy-1;
-    UWORD l, r, u, d; 
-	/* booleans */
-   	l=ll && (LoadBurningShip(p-1) != center);
-    r=rr && (LoadBurningShip(p+1) != center);
-    u=uu && (LoadBurningShip(p-resx) != center);
-    d=dd && (LoadBurningShip(p+resx) != center);
-    /* process the queue (which is actually a ring buffer) */
-    if (l) AddQueue(p-1);
-    if (r) AddQueue(p+1);
-    if (u) AddQueue(p-resx);
-    if (d) AddQueue(p+resx);
-    /* the corner pixels (nw,ne,sw,se) are also neighbors */
-    if((uu&&ll)&&(l||u)) AddQueue(p-resx-1);
-    if((uu&&rr)&&(r||u)) AddQueue(p-resx+1);
-    if((dd&&ll)&&(l||d)) AddQueue(p+resx-1);
-    if((dd&&rr)&&(r||d)) AddQueue(p+resx+1);
-}
-
-ULONG DrawBurningShipFractalBoundary (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
-{
-ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
-UWORD x, y;
-
- /*printf("DrawBurningShipFractalBoundary (shared)\n");*/
-
- CurrentTime (&StartSec,&Dummy);
-
- /* screenbuffer=Win->RPort->BitMap->Planes[0]; */
- screenbuffer=GetBitMapPtr(Win->RPort->BitMap);
- /*Data=screenbuffer;*/
- 
- resx=a2-a1+1;
- resy=b2-b1+1;
- 
- INCREMREAL = (fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = (fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
-
-	TempWin = Win;
-	
-	/* allocation check */
-	if (!AllocateBoundary()) return 0;
-    
-	/* (1) begin by adding the screen edges into the queue */
-    for(y=0; y<resy; ++y) {
-        AddQueue(y*resx /*+ 0*/);
-        AddQueue(y*resx + (resx-1));
-    }
-    for(x=1; x<resx-1; ++x) {
-        AddQueue(/*0*Width* +*/ x);
-        AddQueue((resy-1)*resx + x);
-    }
-	/* for Multi: add also middle lines */
-	for(y=1; y<resy-1; ++y) {
-        AddQueue(y*resx + resx/2);
-    }
-    for(x=1; x<resx-1; ++x) {
-        AddQueue((resy/2)*resx + x);
-    }
-	
-	/* (2) process the queue (which is actually a ring buffer) */
-    flag=0;
-    while(QueueTail != QueueHead) {
-        if(QueueHead <= QueueTail || ++flag & 3) {
-            p = Queue[QueueTail++];
-            if(QueueTail == QueueSize) QueueTail=0;
-        } else p = Queue[--QueueHead];
-        ScanBurningShip(p);
-	    if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
-	}
-		
-	/* (3) lastly, fill uncalculated areas with neighbor color */
-	FillUncalculatedAreas();
-
-	DeallocateBoundary();
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- CurrentTime (&EndSec,&Dummy);
-
- DisplayBeep (Win->WScreen);
-
- return (EndSec-StartSec);
-}
-
 
 
 /* different algorithms (= no brute, tiling, boundary) */
@@ -1555,20 +1444,16 @@ ULONG DrawBuddhaFractalRandomNumbers (struct Window *Win,const LONG a1,const LON
 {
 ULONG Color;
 ULONG StartSec = NULL , EndSec = NULL , Dummy = NULL;
-/*double cx,cy;*/
-double zx, zy/*, xtemp*/;
+double zx, zy;
 LONG rpx, rpy;
 struct RastPort* Rp;
 WORD oldpen;
 ULONG loopcounter=0;
-/*ULONG wrappedover=0;*/
 ULONG i,j;
 double fx,fy;
 ULONG offset, yoffset=0;
 ULONG x,y;
 ULONG maxcounter;
-/* UBYTE* direct; */
-/*double cdx;*/
 double tim, tre;
 double sim; /* second imaginary point (symmetry) */
 UBYTE stop=FALSE;
@@ -1577,19 +1462,15 @@ ULONG resx, resy;
 void (*OldPutPixel)(ULONG,ULONG,ULONG);
 ULONG maxhist;
 
-/* printf("Grayscale Buddha\n"); */
-
  CurrentTime (&StartSec,&Dummy);
 
  /* clear screen */
- /*SetRast(Win->RPort,0);*/ 
  Rp = Win->RPort;
  SetAPen(Rp, oldpen = 0);
 
  maxhist=NEBULA_WIDTH*NEBULA_HEIGHT*3;
  
  OldPutPixel=PutPixel;
- /*if (DD_BPP>=3) PutPixel=PutPixelPenGray2RGB; */
  	
  resx=a2-a1+1;
  resy=b2-b1+1;
@@ -1599,13 +1480,6 @@ ULONG maxhist;
   
  if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
 
- /* set grayscale palette */
-/* cdx=256 / (double)(CURRENT_MAX_COLORS-RESERVED_PENS);
- for (Color=0; Color<=CURRENT_MAX_COLORS-RESERVED_PENS; Color++) 
- {
- 	SetRGB32(ViewPortAddress(Win), Color+RESERVED_PENS, (ULONG)(Color*cdx)<<24,(ULONG)(Color*cdx)<<24,(ULONG)(Color*cdx)<<24); /* nr, r, g, b - rgb must be left-adjusted! (OMG) */
-/* }
-*/ 
  /* reset counters */
  for (offset=0; offset<(a2-a1+1)*(b2-b1+1); offset++)
  {
@@ -1624,7 +1498,7 @@ ULONG maxhist;
 	
 	/* calculate z0 ... zn */
 	i=BuddhaIterationsVampire(i,zx,zy,re,im);
-
+    
 	/* check if orbits should be drawn: BUDDHA: i>BUDDHA_MIN_ITERATIONS vs ANTIBUDDA i==0  */
 	if (
 		((ANTIBUDDHA) && (i==0))
@@ -1681,17 +1555,7 @@ ULONG maxhist;
 	/* give user possibility to interrupt calculation each line */
 	if (loopcounter%50==0)
 	{
-			if (InterruptDrawing(Win,a1,b1,a2,b2)) {
-			
-				/*
-				// restore random palette
-				for (Color=RESERVED_PENS; Color<=255; Color++) 
- 				{
- 					SetRGB32(ViewPortAddress(Win), Color, Color,256-Color,(Color*16)%256); // nr, r, g, b
- 				}
- 				*/
-				return TRUE;
-			}
+			if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
 			
 			if (loopcounter%50000==0) /* 50000 */ 
 			{
@@ -1719,31 +1583,19 @@ ULONG maxhist;
 	}
  }
 
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
  PutPixel=OldPutPixel;
  
  CurrentTime (&EndSec,&Dummy);
 
- DisplayBeep (Win->WScreen);
-
  return (EndSec-StartSec);
 }
 
-void StoreIterations(UBYTE rgb, ULONG i, ULONG j, double fx, double fy, ULONG resx, ULONG resy)
+void StoreIterationsCoreC(double* re, double* im, ULONG* bc, ULONG i, ULONG j, double fx, double fy, ULONG resx, BOOL dosymmetry)
 {
-double tim, tre, sim;
-LONG rpx, rpy;
-ULONG offset, yoffset;
-/* ULONG loopcounter; */
-ULONG rgboffset;
-ULONG maxhist;
+	double tim, tre, sim;
+	LONG rpx, rpy;
+	ULONG offset, yoffset;
 
-	if (j<i) return;
-	
-	rgboffset=NEBULA_WIDTH*NEBULA_HEIGHT*(ULONG)rgb; /* rgb: red = 0, green = 1, blue = 2 */
-    maxhist=NEBULA_WIDTH*NEBULA_HEIGHT*3;
-	
 	while (j!=i)
 	{
 		tim=im[j];
@@ -1757,35 +1609,49 @@ ULONG maxhist;
 			rpx = (tim - (double)IMIN) * fx;
 			rpy = (tre - (double)RMIN) * fy;
 			
-			yoffset = rgboffset + rpy * resx;
+			yoffset = /*rgboffset +*/ rpy * resx;
 			offset = yoffset + rpx;
 			
-			if (offset<maxhist) BuddhaCounter[offset]++;
-		}
-			
-		/* use symmetry and draw a second point */
-		if (BUDDHA_USE_SYMMETRY) 
+            /*BuddhaCounter*/
+            bc[offset]++;
+        }
+		
+        if (dosymmetry)
 		{
-			sim=-tim;
-			if (
-				(sim>IMIN) && (sim<IMAX) 
-			  	&& (tre>RMIN) && (tre<RMAX)
-			   )
-			{  
-				rpx = (sim - (double)IMIN) * fx;
+            sim=-tim;
+			rpx = (sim - (double)IMIN) * fx;
 				
-				/*offset = rpy * (a2-a1+1) + rpx;*/
-				offset = yoffset + rpx;
+			offset = yoffset + rpx;
 	    		
-				if (offset<maxhist) BuddhaCounter[offset]++;
-			}
-		}
-		
-		/* increment loopcounter (which becomes then a "orbitsdrawncounter") */
-/*		loopcounter++; // this is no longer needed ?!? */
-		
+            /* BuddhaCounter */
+            bc[offset]++;
+		}	
 		j--;
 	}
+}
+
+void StoreIterations(UBYTE rgb, ULONG i, ULONG j, double fx, double fy, ULONG resx, ULONG resy)
+{
+	ULONG rgboffset;
+	BOOL dosymmetry;
+	ULONG *bc;
+
+	if (j<i) return;
+
+	if (USE_SYMMETRY)
+	{
+		if (BaseFractalType==BURNINGSHIP) dosymmetry=FALSE;
+        else if (fabs(fabs(IMIN)-fabs(IMAX))<BUDDHA_AUTO_CENTER_EPSILON) dosymmetry=TRUE;
+        else dosymmetry=FALSE;
+	} else dosymmetry=FALSE;
+    
+    rgboffset=NEBULA_WIDTH*NEBULA_HEIGHT*(ULONG)rgb; /* rgb: red = 0, green = 1, blue = 2 */
+	
+    bc=&BuddhaCounter[rgboffset];
+
+	/* StoreIterationsCoreASM creates Illegal Memory Access on UAE */	
+    if (vampire) StoreIterationsCoreASM(re,im,bc,i,j,fx,fy,resx,dosymmetry); /* replaces the following while */
+    else StoreIterationsCoreC(re,im,bc,i,j,fx,fy,resx,dosymmetry); /* replaces the following while */
 }
 
 void printhistogramstats(void) 
@@ -1834,155 +1700,350 @@ void printhistogramstats(void)
 	
 }
 
-UWORD LoadMandel4Buddha(ULONG p) {
-    UWORD x,y;
-	ULONG Color, i;
-	double cx, cy;
-
-    if(Done[p] & Loaded) return Data[p];
-    x = p % resx;
-    y = p / resx;
-	
-	cy = 1.5-y*INCREMIMAG;  /* hm ... FlashMandel is upside down ... */
-	cx = x*INCREMREAL+RMIN;	
-    
-/*	Color = i = Mandel68k_FPU_Vampire(ITERATIONS-1,cx,cy); */
-	Color = i = FractalInCGeneric(ITERATIONS-1,cx,cy);
-	
-	
-	if (Color)
-    {
-     	Color *= CURRENT_MAX_COLORS,
-
-        Color /= ITERATIONS,
-
-   	   	Color += RESERVED_PENS;
-    }
-	PutPixel(x,y,Color);
-   
-    Done[p] |= Loaded;
-	return Data[p] = Color;
-}
-
-void ScanMandel4Buddha(ULONG p) {
-    UWORD x = p % resx, y = p / resx;
-    UWORD center = LoadMandel4Buddha(p);
-    UWORD ll = x >= 1, rr = x < resx-1;
-    UWORD uu = y >= 1, dd = y < resy-1;
-    UWORD l, r, u, d; 
-	/* booleans */
-   	l=ll && (LoadMandel4Buddha(p-1) != center);
-    r=rr && (LoadMandel4Buddha(p+1) != center);
-    u=uu && (LoadMandel4Buddha(p-resx) != center);
-    d=dd && (LoadMandel4Buddha(p+resx) != center);
-    /* process the queue (which is actually a ring buffer) */
-    if (l) AddQueue(p-1);
-    if (r) AddQueue(p+1);
-    if (u) AddQueue(p-resx);
-    if (d) AddQueue(p+resx);
-    /* the corner pixels (nw,ne,sw,se) are also neighbors */
-    if((uu&&ll)&&(l||u)) AddQueue(p-resx-1);
-    if((uu&&rr)&&(r||u)) AddQueue(p-resx+1);
-    if((dd&&ll)&&(l||d)) AddQueue(p+resx-1);
-    if((dd&&rr)&&(r||d)) AddQueue(p+resx+1);
-}
-
-ULONG DrawMandelFractalBoundary4Buddha (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
+ULONG GetCyclePeriod(double *re, double *im, ULONG maxi, double epsilon)
 {
-UWORD x, y;
-
-/* printf("Mandel boundary 4 Buddha\n"); */
-
- /* screenbuffer=Win->RPort->BitMap->Planes[0]; */ /* 20240406 */
- screenbuffer=GetBitMapPtr(Win->RPort->BitMap);
-  
- Data=screenbuffer;
- resx=a2-a1+1;
- resy=b2-b1+1;
- 
- INCREMREAL = ((double)fabs (4.0)) / ((double) (a2 - a1 + 1));
-
- INCREMIMAG = ((double)fabs (3.0)) / ((double) (b2 - b1 + 1));
-
- ITERATIONS = MAX_ITERATIONS + 1;
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
-
-	TempWin = Win;
-	
-	/* allocation check */
-	if (!AllocateBoundary()) return 0;
-
-	ClearBoundaryBuffers();
-	    
-	/* (1) begin by adding the screen edges into the queue */
-    for(y=0; y<resy; ++y) {
-        AddQueue(y*resx /*+ 0*/);
-        AddQueue(y*resx + (resx-1));
-    }
-    for(x=1; x<resx-1; ++x) {
-        AddQueue(/*0*Width* +*/ x);
-        AddQueue((resy-1)*resx + x);
-    }
-	for(y=1; y<resy-1; ++y) {
-        AddQueue(y*resx + resx/2);
-    }
-    for(x=1; x<resx-1; ++x) {
-        AddQueue((resy/2)*resx + x);
-    }
-	/* (2) process the queue (which is actually a ring buffer) */
-    flag=0;
-    while(QueueTail != QueueHead) {
-        if(QueueHead <= QueueTail || ++flag & 3) {
-            p = Queue[QueueTail++];
-            if(QueueTail == QueueSize) QueueTail=0;
-        } else p = Queue[--QueueHead];
-        ScanMandel4Buddha(p);
-	    if (InterruptDrawing(Win,a1,b1,a2,b2)) return TRUE;
-	}
-		
-	/* (3) lastly, fill uncalculated areas with neighbor color */
-	/* FillUncalculatedAreas(); */
-
-	/* DeallocateBoundary(); */
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
-
- return 0;
+	ULONG tortoise=0, hare=1;
+    BOOL stop=FALSE;
+    double tr, ti, hr, hi;
+    double act_eps_re, act_eps_im;
+    ULONG r=0;
+    
+    do 
+   	{
+    	/* read values from table */
+    	tr=re[tortoise]; ti=im[tortoise];
+        hr=re[hare]; hi=im[hare];
+        
+        /* calculate epsilon */
+        act_eps_re=fabs(tr-hr); 
+        act_eps_im=fabs(ti-hi); 
+              
+        if ((act_eps_re<=epsilon) && (act_eps_im<=epsilon)) 
+        {
+            stop=TRUE;
+            r=hare-tortoise; 
+        }
+        else
+        {
+        	hare+=2;
+            tortoise+=1;
+            if (hare>=maxi) 
+            {
+            	r=0;	
+                stop=TRUE;
+        	}
+        }
+    } while (!stop);
+    
+	return r;
 }
 
+/************************************************************************************
+*************************************************************************************/
 
+void GetSampleNumber(double mdx, double mdy, 
+	ULONG *edgequeue, ULONG queue_i, 
+	ULONG *lemniscates, ULONG lemni_i)
+{
+	static UBYTE method=0;
+	double zx, zy;    
+	ULONG p, x, y, i;
+    /* char s[20]; */
+    ULONG hmbx, hmby, hmby2;
+    BOOL repeat;
+    BOOL valid_point=FALSE;
+    
+    /* choose a point using one or several methods (taking turns) */
+    do
+    {
+    	valid_point=FALSE;
+        	
+        if (method==0)
+        {	
+            if (BUDDHA_RANDOM)
+            {
+                    zx = (rand() / (double)RAND_MAX) * (double)(4.0)/* - 2.0*/;	
+					zy = (rand() / (double)RAND_MAX) * (double)(3.0)/* - 1.5*/; 
+            		
+                    /* additional randomizing to increase precision */
+                    /* resolution with RAND_MAX: 0.0000000004656612 => not enough! */
+            		zx += (BUDDHA_RANDOMIZE_X*2.0*mdx) 
+                    * (
+                    	(double)rand()+(double)rand()
+                      )
+                         
+                    / (
+                    	(double)RAND_MAX+(double)RAND_MAX
+                      ) 
+                    - mdx;
+            		zy += (BUDDHA_RANDOMIZE_Y*2.0*mdy) * ((double)rand()+(double)rand()) / ((double)RAND_MAX+(double)RAND_MAX) - mdy; 	
+				
+                	x=zx/mdx;
+                	y=zy/mdy; 
+                    hmbx=(ULONG)(zx * (double)HITMAP_EXTENSION / mdx);
+                        hmby=(ULONG)(zy * (double)HITMAP_EXTENSION / mdy); 
+            		zx-=2.0;
+                	zy-=1.5;
+                    
+                    valid_point=TRUE;
+            	
+            } else method++;
+        }
+       
+        if (method==1)
+        {
+            if (BUDDHA_EDGES)
+            {
+            		 i = (ULONG)((double)rand() / (double)RAND_MAX * (double)queue_i);
+					 p = edgequeue[i];
+					 x = p%DD_WIDTH;
+					 y = p/DD_WIDTH;
+                     zx = x*mdx-2;
+					 zy = y*mdy-1.5;
+                     
+                     /* randomize */
+            		 zx += (BUDDHA_RANDOMIZE_X*2.0*mdx) * ((double)rand() / (double)RAND_MAX) - mdx;
+            		 zy += (BUDDHA_RANDOMIZE_Y*2.0*mdy) * ((double)rand() / (double)RAND_MAX) - mdy;
+                 	 
+                   	 hmbx=(ULONG)((zx+2.0) * (double)HITMAP_EXTENSION / mdx);
+                        hmby=(ULONG)((zy+1.5) * (double)HITMAP_EXTENSION / mdy);  
+            
+            		 valid_point=TRUE;
+                     
+            } else method++;
+        }
+         
+        if (method==2)
+        {
+            if (BUDDHA_LEMNISCATES)
+        	{
+            		 i = (ULONG)((double)rand() / (double)RAND_MAX * (double)lemni_i);
+					 p = lemniscates[i];
+					 x = p%DD_WIDTH;
+					 y = p/DD_WIDTH;
+                     zx = x*mdx-2;
+					 zy = y*mdy-1.5;
+                     
+                     /* randomize */
+            		 zx += (BUDDHA_RANDOMIZE_X*2.0*mdx) * ((double)rand() / (double)RAND_MAX) - mdx;
+            		 zy += (BUDDHA_RANDOMIZE_Y*2.0*mdy) * ((double)rand() / (double)RAND_MAX) - mdy;
+
+					 /* these lines fix the memory bug!? */    				 
+                     hmbx=(ULONG)((zx+2.0) * (double)HITMAP_EXTENSION / mdx);
+                        hmby=(ULONG)((zy+1.5) * (double)HITMAP_EXTENSION / mdy);  
+            
+            		 valid_point=TRUE;
+                     
+            } else method++;
+        }
+        
+        if (method>2) method=0;
+     
+    	if (valid_point)
+        {	
+    	    if (USE_HAMMAP)
+    	    {	
+    	  		if (FractalType != BURNINGSHIP)  	
+          		{
+                	repeat = HAMMap[
+    	                            		hmby * (DD_WIDTH>>HITMAP_SHIFT)
+    	                                    +
+    	                                    (x>>HITMAP_SHIFT)
+    	                                  ] 
+    	                                  & 
+    	                                  (1<<(hmbx%32));
+    	 		}
+                else
+                {
+    				hmby2 = DD_HEIGHT*HITMAP_EXTENSION - hmby - 1; 
+             		repeat = HAMMap[
+    	                            		hmby2 * (DD_WIDTH>>HITMAP_SHIFT)
+    	                                    +
+    	                                    (x>>HITMAP_SHIFT)
+    	                                  ] 
+    	                                  & 
+    	                                  (1<<(hmbx%32));
+                }   
+            } else repeat=FALSE;
+                                      
+    		if (!repeat) 
+    	    {
+    			method++;		
+    	        if (method>2) method=0;
+    	    }
+	    } else repeat=FALSE;
+
+    }   
+    while (repeat);
+        
+	NEBULA_SAMPLE_RE=zx;
+    NEBULA_SAMPLE_IM=zy;
+    NEBULA_SAMPLE_X=x;
+    NEBULA_SAMPLE_Y=y;
+}
+
+void ShowHAMMap(ULONG* edgequeue, ULONG edge_i, ULONG* lemniscates, ULONG lemni_i) 
+{
+	ULONG i, p, x, y, dx=10, dy=10;
+    UBYTE yshift;
+    
+    switch (HITMAP_EXTENSION)
+    {
+    	case  8 : yshift = 3; break;
+        case 16 : yshift = 4; break;
+        case 32 : yshift = 5; break;
+    }
+    
+    /* alpha blending: a == 0 => write pixel ; a != 0 => don't write pixel */
+    if (USE_HAMMAP)
+    {
+    	switch (HITMAP_VISUALIZATION)
+        {
+        	case 0 : /* lores */
+    				 /* rudimentary (fast) visualization */
+        
+        			 for (y=0;y<(DD_HEIGHT>>2);y++)
+    				 {
+ 						for (x=0;x<(DD_WIDTH>>2);x++)
+    	    			{
+    	    				if (
+                    
+                    			HAMMap[
+                    					(y<<2)*HITMAP_EXTENSION*(DD_WIDTH>>HITMAP_SHIFT)+((x<<2)>>HITMAP_SHIFT)
+                    			      ]
+    	           			) 
+                            {
+    	           		 		if ((HITMAP_COLORS[3] & 0xff000000)==0) PutPixelRGB(x+dx,y+dy, (HITMAP_COLORS[3] & 0xff0000)>>16, (HITMAP_COLORS[3] & 0xff00)>>8, (HITMAP_COLORS[3] & 0xff));
+    	    				} 
+                            else 
+                            {
+                            	if ((HITMAP_COLORS[2] & 0xff000000)==0) PutPixelRGB(x+dx,y+dy, (HITMAP_COLORS[2] & 0xff0000)>>16, (HITMAP_COLORS[2] & 0xff00)>>8, (HITMAP_COLORS[2] & 0xff));
+                        	}
+                        }   
+                     }
+                     break;
+            case 1 : /* hires */
+    				 /* detailed (slow) visualization */
+    				 for (y=0;y<DD_HEIGHT*HITMAP_EXTENSION;y++)
+    				 {
+ 					 	for (x=0;x<DD_WIDTH;x++)
+    	    			{
+    	    				if (
+                    			HAMMap[
+                    					y *(DD_WIDTH>>HITMAP_SHIFT)+(x>>HITMAP_SHIFT)
+                    			      ]
+    	           			) 
+    	           			{			
+                            	if ((HITMAP_COLORS[3] & 0xff000000)==0) PutPixelRGB((x>>2)+dx,((y>>2)>>yshift)+dy, (HITMAP_COLORS[3] & 0xff0000)>>16, (HITMAP_COLORS[3] & 0xff00)>>8, (HITMAP_COLORS[3] & 0xff));
+    	    				} 
+                            else 
+                            {
+                            	if ((HITMAP_COLORS[2] & 0xff000000)==0) if (GetPixelRGB24((x>>2)+dx,((y>>2)>>yshift)+dy) != 0xff0000) PutPixelRGB((x>>2)+dx,((y>>2)>>yshift)+dy, (HITMAP_COLORS[2] & 0xff0000)>>16, (HITMAP_COLORS[2] & 0xff00)>>8, (HITMAP_COLORS[2] & 0xff));
+                         	}
+                         }   
+    				 }	
+    				 break;
+        } 
+    }
+
+    if (BUDDHA_EDGES)
+    {
+    	/* edges */	
+        for (i=0; i<edge_i;i++)
+    	{
+    	    p = edgequeue[i];	
+    	    y = p / DD_WIDTH;
+			x = p % DD_WIDTH;	
+        
+    	    if (
+                GetPixelRGB24((x>>2)+dx,(y>>2)+dy) != HITMAP_COLORS[3] /* != MISS */  
+               )	
+    	       {   
+               		if ((HITMAP_COLORS[0] & 0xff000000) == 0) PutPixelRGB((x>>2)+dx, (y>>2)+dy,(HITMAP_COLORS[0] & 0xff0000)>>16, (HITMAP_COLORS[0] & 0xff00)>>8, (HITMAP_COLORS[0] & 0xff));
+    		   }	
+        }
+    }
+    
+    if (BUDDHA_LEMNISCATES)
+    {
+    	/* lemniscates */
+    	for (i=0; i<lemni_i;i++)
+    	{
+    		p = lemniscates[i];	
+    	    y = p / DD_WIDTH;
+			x = p % DD_WIDTH;	
+        
+    	    if (
+                GetPixelRGB24((x>>2)+dx,(y>>2)+dy) != HITMAP_COLORS[3] /* = MISS */ 
+    	       )
+    	       {   
+               		if ((HITMAP_COLORS[1] & 0xff000000) == 0) PutPixelRGB((x>>2)+dx, (y>>2)+dy,(HITMAP_COLORS[1] & 0xff0000)>>16, (HITMAP_COLORS[1] & 0xff00)>>8, (HITMAP_COLORS[1] & 0xff));
+    		   }	
+        }
+    }
+}
+           
 ULONG DrawTrueColorBuddhaFractalRandomNumbers (struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)
 {
-ULONG StartSec = NULL , EndSec = NULL , StartTicks = NULL, EndTicks = NULL;
-double zx, zy;
-struct RastPort* Rp;
-ULONG loopcounter=0;
-ULONG i,j;
-double fx,fy;
-ULONG offset; 
-ULONG x,y;
-UBYTE stop=FALSE;
-ULONG resx, resy;
-UBYTE buddhared, buddhagreen, buddhablue;
-ULONG divred, divgreen, divblue;
-ULONG maxred, maxgreen, maxblue;
-ULONG deltaiter;
-struct IntuiText BTxt;
-UBYTE MaxTxt[200];
-double mdx, mdy;
-ULONG redrawcounter;
-double distx, disty;
-LONG x2, y2;
-ULONG temp_algorithm;
-UBYTE showpoints=TRUE;
-ULONG tempiter;
-ULONG histoffsetgreen, histoffsetblue, maxhist;
-ULONG deltaseconds, lastdeltaseconds, refreshseconds, newseconds;
+ ULONG StartSec = NULL , EndSec = NULL , StartTicks = NULL, EndTicks = NULL;
+ double zx, zy;
+ struct RastPort* Rp;
+ ULONG loopcounter=0;
+ ULONG i,j;
+ double fx,fy;
+ ULONG offset; 
+ ULONG x,y;
+ UBYTE stop=FALSE;
+ ULONG resx, resy;
+ UBYTE buddhared, buddhagreen, buddhablue;
+ ULONG maxred, maxgreen, maxblue;
+ ULONG deltaiter;
+ struct IntuiText BTxt;
+ UBYTE MaxTxt[200];
+ double mdx, mdy;
+ ULONG redrawcounter;
+ ULONG temp_algorithm;
+ UBYTE showpoints=TRUE;
+ ULONG tempiter;
+ ULONG histoffsetgreen, histoffsetblue, maxhist;
+ ULONG deltaseconds, lastdeltaseconds, refreshseconds, newseconds;
+ double rfx, rfy; 
+ double IMIN1,IMAX1,RMIN1, RMAX1;
+ double dx, dy, d;
+ ULONG period;
+ UBYTE nc[9]; /* nc = nine colors */
+ UBYTE ncc; /* nine colors count */
+ BOOL antibuddha_hit;
+ ULONG hmx, hmy, hmy2;
+ double fr, fg, fb;
+ ULONG hmbx, hmby, hmby2; /* HamMapBitX/Y for 32bit HAMMap */
+ ULONG accumulated_delta_for_autosave=0;
+ ULONG autosave_count=0;
+ BOOL zoom_reuse;
+
+ PutPointer (MYILBM.win,ZoomPointer,ZPW,ZPH,ZPXO,ZPYO,FM_BUSY_MOUSE_POINTER);
+ OffTitle(MYILBM.scr);
+
+ zoom_reuse = FMG_BUDDHA_ZOOM_IN && (DD_WIDTH==FMG_LAST_QUEUE_WIDTH) && (DD_HEIGHT==FMG_LAST_QUEUE_HEIGHT);
+
+ if (((!BUDDHA_RESUME) || (!lemni_i) || (!queue_i)) && ((BUDDHA_EDGES) || (BUDDHA_LEMNISCATES)))
+ {
+    if (!Queue)
+    {
+        if (!AllocateBoundary()) return 0;
+ 	}
+ }
+
+ /* just to be sure that we have enough memory for buddha */
+ AllocBuddha(); /* this function does all by itself (checks and resizing of buffers etc.) */
  
- /* clear screen */
+ rfx=BUDDHA_RANDOMIZE_X;
+ rfy=BUDDHA_RANDOMIZE_Y;
+
+ SHOW_MAXCOUNTERS=FALSE;
+ BUDDHA_RANDOM_HAMMAP=TRUE;
+ 
  Rp = Win->RPort;
- /*SetRast(Rp,0);*/ 
  
  /* maxcounters text */
  BTxt.FrontPen=2;
@@ -2001,58 +2062,226 @@ ULONG deltaseconds, lastdeltaseconds, refreshseconds, newseconds;
  histoffsetblue=histoffsetgreen*2;
  maxhist=histoffsetgreen*3;
  
+ algorithm_buddha=BUDDHA_EDGES;
+ resx=a2-a1+1;
+ resy=b2-b1+1;
+ 
+ /* for leminscates boundary fractal */
+ INCREMREAL = ((double)fabs (4.0)) / ((double) (a2 - a1 + 1));
+
+ INCREMIMAG = ((double)fabs (3.0)) / ((double) (b2 - b1 + 1));
+
+ ITERATIONS = MAX_ITERATIONS + 1;
+
  /* draw boundary trace first to obtain border points */
- if ((algorithm_buddha==BUDDHA_BOUNDARY) || (algorithm_buddha==BUDDHA_SWITCH)) 
+ if ((((!BUDDHA_RESUME) && (!zoom_reuse)) || (!lemni_i) || (!queue_i)) && ((BUDDHA_EDGES) || (BUDDHA_LEMNISCATES)))
  {
  	tempiter=MAX_ITERATIONS;
-	MAX_ITERATIONS=255; /* set boundary trace fix to 256 iterations */
- 	DrawMandelFractalBoundary4Buddha (Win,a1,b1,a2,b2);
- 	MAX_ITERATIONS=tempiter;
+	MAX_ITERATIONS=MAX_ITERATIONS; /* set boundary trace fix to 256 iterations */
+
+    /* save old coordinates */
+    RMIN1=RMIN;
+    RMAX1=RMAX;
+    IMIN1=IMIN;
+    IMAX1=IMAX;
+    
+    IMIN=-1.5;
+    IMAX=1.5;
+    RMIN=-2.0;
+    RMAX=2.0;
+    
+    DrawFractalBoundaryGeneric(Win,a1,b1,a2,b2);
+    
+    /* restore old coordinates */
+    RMIN=RMIN1;
+    RMAX=RMAX1;
+    IMIN=IMIN1;
+    IMAX=IMAX1;
+    
+    INCREMREAL = ((double)fabs (RMAX-RMIN)) / ((double) (a2 - a1 + 1));
+
+ INCREMIMAG = ((double)fabs (IMAX-IMIN)) / ((double) (b2 - b1 + 1));
+
+ ITERATIONS = MAX_ITERATIONS + 1;
+ 
+    MAX_ITERATIONS=tempiter;
  }
  
  /* mandelbrot deltas */
  mdx = (fabs (4.0)) / ((double) (a2 - a1 + 1));
  mdy = (fabs (3.0)) / ((double) (b2 - b1 + 1));
+  
+/* show queue end build edge queue */
+/*
+printf("Queue: %p Done: %p\n", Queue, Done);
+printf("edgequeue: %p lemniscates: %p\n", edgequeue, lemniscates);
+printf("DD_WIDTH: %u DD_HEIGHT: %u\n", DD_WIDTH, DD_HEIGHT);
+printf("BUDDHA_EGDES: %u BUDDHA_LEMNISCATES: %u\n", BUDDHA_EDGES, BUDDHA_LEMNISCATES);
+*/
 
-/*
- // show points marked with "Loaded" (= borders from boundary trace algorithm)
- for (y=0;y<DD_HEIGHT; y++)
- {
-	for (x=0;x<DD_WIDTH; x++) 
-	{
-		if (Done[y*DD_WIDTH+x] & Loaded) PutPixelRGB(x,y,0xff, 0x00, 0x00);	
-	} 
- }
-*/ 
-/*
- printf("QueueHead: %u\n", QueueHead);
- 
- i=5000;
- while ((Queue[i]!=0) && (i<DD_WIDTH*DD_HEIGHT))  i++;
- printf("Check QueueHead: %u\n", i);
- 
- /* show queue */
-/*
+if ((((!BUDDHA_RESUME) && (!zoom_reuse)) || (!lemni_i) || (!queue_i)) && ((BUDDHA_EDGES) || (BUDDHA_LEMNISCATES)))
+{
+ queue_i=0; lemni_i=0;
  for (i=0; i<DD_HEIGHT*DD_WIDTH; i++)
  {
  	if ((p = Queue[i])!=0)
 	{
-		y = p / DD_WIDTH;
+        y = p / DD_WIDTH;
 		x = p % DD_WIDTH;
- 		PutPixelRGB(x,y,0xff, 0x00, 0x00);
- 	}
+		
+        dx=x*mdx-2.0; 
+        dy=y*mdy-1.5; 
+        
+        d=dx*dx+dy*dy;
+        
+        if (Done[p] & Loaded)
+        {
+        	/* check if pixel is surrounded by other colors (= lemniscate) */
+            
+            nc[0] = GetPixelPen(x-1,y-1);
+            nc[1] = GetPixelPen(x,y-1);
+            nc[2] = GetPixelPen(x+1,y-1);
+            
+            nc[3] = GetPixelPen(x-1,y);
+            nc[4] = GetPixelPen(x,y);
+            nc[5] = GetPixelPen(x+1,y);
+                
+        	nc[6] = GetPixelPen(x-1,y+1);
+            nc[7] = GetPixelPen(x,y+1);
+            nc[8] = GetPixelPen(x+1,y+1);
+            
+            ncc=0;
+            for (j=0;j<9;j++)
+            {
+            	if (nc[j]==nc[4]) ncc++;
+            }
+            
+            if ((ncc!=9) || (nc[4]==0))
+            {
+            
+            	if (!((x==0) || (y==0) || (x==resx-1) || (y==resy-1)))		
+        		{
+                
+            		if (GetPixelPen(x,y)==0)
+            		{
+						/* exclude "ring" */
+						if ( 
+							(
+					        	(dx*dx)
+					   		    +
+					        	(dy*dy)
+					        )
+					        < 4.0
+						   )
+						   {         
+		    		            if (y!=resy>>1)
+		    		            {		
+		    		                if (x!=resx>>1)
+		    		                {	
+		    		                    /* PutPixelRGB(x,y,0x00, 0xff, 0x00); */
+		    		            		if (edgequeue) edgequeue[queue_i++]=p;    
+		    		        		}	
+		    		            }
+		    		            /* not sure about this else part ... */
+		    		            else
+		    		            {
+		    		            	if ((nc[1]!=nc[4]) && (nc[7]!=nc[4]))
+		    		            	{
+		    		            		/* PutPixelRGB(x,y,0x00, 0xff, 0x00); */
+		    		            		if (edgequeue) edgequeue[queue_i++]=p;    
+		    		                }
+		    		            }
+						    }  
+						    else 
+						    {
+						        /* add it to lemniscates */
+						        if (BUDDHA_LEMNISCATES && lemniscates) lemniscates[lemni_i++]=p;
+						    }          
+	            
+	        		}
+        			else
+            		{
+            		    if (lemniscates) lemniscates[lemni_i++]=p;   
+                	}
+        		}
+    		}
+
+ 		} 		
+
+	}
+	FMG_LAST_QUEUE_WIDTH=DD_WIDTH;
+	FMG_LAST_QUEUE_HEIGHT=DD_HEIGHT;
  }
-*/	
+ 
+ SetRast(Win->RPort,0);
+ 
+ /* show edge queue */ 
+ if (BUDDHA_EDGES)
+ {
+ 	for (i=0; i<queue_i; i++)
+ 	{
+ 	   p = edgequeue[i];
+ 	   y = p / DD_WIDTH;
+	   x = p % DD_WIDTH;
+       PutPixelRGB(x,y,0xff, 0x00, 0x00);
+	}
+ }
+
+ /* show lemniscates */
+ if (BUDDHA_LEMNISCATES)
+ {
+ 	for (i=0; i<lemni_i; i++)
+ 	{
+ 	   	p = lemniscates[i];
+   		y = p / DD_WIDTH;
+		x = p % DD_WIDTH;
+   		PutPixelRGB(x,y,0xff, 0x00, 0xff);
+	}
+ }
+}
+
+ SetRast(Win->RPort,0);
+  
+/* show queues */
+/* use ShowHAMMap for that now */
+/* if (!BUDDHA_RESUME)
+ {
+    	if (BUDDHA_EDGES) 
+        {
+        	for (i=0; i<queue_i; i++) 
+            {
+          		p=edgequeue[i];
+                y = p / DD_WIDTH;
+				x = p % DD_WIDTH;
+    			PutPixelRGB(x,y,0xff, 0x00, 0x00);
+            }
+        }
+    	if (BUDDHA_LEMNISCATES) 
+        {
+        	for (i=0; i<lemni_i; i++) 
+            {
+          		p=lemniscates[i];	
+                y = p / DD_WIDTH;
+				x = p % DD_WIDTH;
+    			PutPixelRGB(x,y,0x00, 0xff, 0x00);
+            }
+        }
+ }
+*/ 
+
  CurrentTime (&StartSec,&StartTicks);
 
  redrawcounter= 10000;
  
  resx=a2-a1+1;
  resy=b2-b1+1;
- 
+
  fx=(resx)/(IMAX-IMIN);
  fy=(resy)/(RMAX-RMIN);
-  
+
+ /*printf("RE: %2.17lf - %2.17lf IM: %2.17lf - %2.17lf => fx: %f fy: %f (resx: %u resy: %u)\n", 
+ 	RMIN, RMAX, IMIN, IMAX, fx, fy, resx, resy);
+ */
  if (TMASK & MASK) ShowTitle (Win->WScreen,FALSE);
 
  /* reset counters or leave them as is (in case of resume) */
@@ -2062,209 +2291,322 @@ ULONG deltaseconds, lastdeltaseconds, refreshseconds, newseconds;
  	{
 		BuddhaCounter[offset]=0;
 	}
+	if (USE_HAMMAP) ClearHAMMap();
+    ACCUMULATED_BUDDHA_TIME=0;
+ 
  } /* else PrintHistData(BuddhaCounter); */
-
+ 
  refreshseconds=1;
  lastdeltaseconds=deltaseconds=StartSec;
- 
+
  while (!stop)
  {
     loopcounter++;
-	if (algorithm_buddha==BUDDHA_SWITCH)
-	{
-		if (loopcounter & 1<<BUDDHA_RANDOMIZATION_FREQUENCY) temp_algorithm=BUDDHA_RANDOM;
-		else temp_algorithm=BUDDHA_BOUNDARY;
-	} else temp_algorithm=algorithm_buddha;
 	
-	/* disable visual debugging for used pixels / values */
+    /* disable visual debugging for used pixels / values */
 	showpoints=0;
-	
+	temp_algorithm=BUDDHA_RANDOM;
+    
 	/* keep original intervals for random points */
-	if (temp_algorithm==BUDDHA_RANDOM)
-	{
-		zx = (rand() / (double)RAND_MAX) * (double)(4.0) - 2.0;	
-		zy = (rand() / (double)RAND_MAX) * (double)(3.0) - 1.5; 
-	}
-	else 
-	{
-		i=(ULONG)(rand() / (double)RAND_MAX * (double)QueueHead);
-		p = Queue[i];
-		x = p%DD_WIDTH;
-		y = p/DD_WIDTH;
+	/* search for a good point */	
+    GetSampleNumber(mdx, mdy, edgequeue, queue_i, lemniscates, lemni_i);
+    
+    zx = NEBULA_SAMPLE_RE;
+    zy = NEBULA_SAMPLE_IM;
 	
-		/* show pixel used for rendering */
-		if (showpoints) PutPixelRGB(x,y,0x00, 0xff, 0x00); 
-			
-		zx = x*mdx-2;
-		zy = y*mdy-1.5;
-	}
-
-	/* randomization for BUDDHA_BOUNDARY */
-	if ((temp_algorithm==BUDDHA_BOUNDARY) && (BUDDHA_BOUNDARY_RANDOMIZATION!=0)) 
-	{
-		distx= (BUDDHA_BOUNDARY_RANDOMIZATION/2.0) - (double) rand() / (double)RAND_MAX*BUDDHA_BOUNDARY_RANDOMIZATION;
-		disty= (BUDDHA_BOUNDARY_RANDOMIZATION/2.0) - (double) rand() / (double)RAND_MAX*BUDDHA_BOUNDARY_RANDOMIZATION;
+    hmx = NEBULA_SAMPLE_X; /* hammap x */
+	hmy = NEBULA_SAMPLE_Y; 	
 	
-		zx+=distx;
-		zy+=disty;
-	}
-
-	/* show pixel used for rendering */
-	if (showpoints)
-	{
-		x2= (zx+2) / mdx;
-		y2= (zy+1.5) / mdy;
-	 
-	 	/* clipping */
-/*
-	 	if (x2<0) x2=0;
-		if (y2<0) y2=0;
-		if (x2>(DD_WIDTH-1)) x2=DD_WIDTH-1;
-		if (y2>(DD_HEIGHT-1)) y2=DD_HEIGHT-1;
-*/	
-		if ((x2>0) && (x2<DD_WIDTH-1) && (y2>0) && (y2<DD_HEIGHT-1))
-		{
-			if (temp_algorithm==BUDDHA_RANDOM) PutPixelRGB(x2,y2,0xff, 0xff, 0x00);
-			else PutPixelRGB(x2,y2,0x00, 0xff, 0xff); 
-		}
-	}
-	
-	/* printf("Queue[%u]: %u => x: %u y: %u <=> (%1.2f,%1.2f)\n", i, p, x, y, zx, zy); */
-		
+    hmbx = (ULONG)((NEBULA_SAMPLE_RE+2.0) * (double)HITMAP_EXTENSION / mdx);
+    hmby = (ULONG)((NEBULA_SAMPLE_IM+1.5) * (double)HITMAP_EXTENSION / mdy);
+    
+    /* symmetry for hitmap */
+    hmy2  = DD_HEIGHT-hmy-1; 
+    hmby2 = DD_HEIGHT*HITMAP_EXTENSION - hmby - 1; 
+     
 	i = j = MAX_ITERATIONS + 1;	
-	
+    
 	/* calculate z0 ... zn */
-	i=FractalInCGenericStoreIterations(i,zx,zy); /*	i=BuddhaIterationsVampire(i,zx,zy,re,im); i=MultiMandelInCStoreIterations(i,zx,zy,re,im); */
-	
-	/* check if orbits should be drawn: BUDDHA: i>BUDDHA_MIN_ITERATIONS vs ANTIBUDDA i==0  */
-	deltaiter=MAX_ITERATIONS-i;
-	if (
-		((ANTIBUDDHA) && (i==0))
-		||
-		((!ANTIBUDDHA) && (deltaiter<FM_REDITER) && (deltaiter>FM_REDMIN)) /* && ((MAX_ITERATIONS-i)>BUDDHA_MIN_ITERATIONS)) */
-	   )
-	{
-		
-		StoreIterations(0,i,j,fx,fy, resx, resy);
-	}
-
-	if (
-		((ANTIBUDDHA) && (i<=FM_GREENITER))
-		||
-		((!ANTIBUDDHA) && (deltaiter<FM_GREENITER) && (deltaiter>FM_GREENMIN))
-	   )
-	{
-		StoreIterations(1,i,j,fx,fy, resx, resy);
-	}
-
-	if (
-		((ANTIBUDDHA) && (i<=FM_BLUEITER))
-		||
-		((!ANTIBUDDHA) && (deltaiter<FM_BLUEITER) && (deltaiter>FM_BLUEMIN))
-	   )
-	{
-		
-		StoreIterations(2,i,j,fx,fy, resx, resy);
-	}
-
+    i=FractalInCGenericStoreIterations(i,zx,zy);
+    
+    if (ANTIBUDDHA)
+    {
+        /* all antinebula (Antibuddhabrot) functions */  
+        if (i==0)
+        {		
+			/* only use points that do not escape */
+	    	
+            if (USE_PERIODICITY)
+	        {
+                /* prime number coloring */
+                period=GetCyclePeriodASM(re,im,MAX_ITERATIONS,PERIODICITY_EPSILON);
+	            /*printf("period: %u\n", period);*/
+                
+            	antibuddha_hit=FALSE;
+            
+            	if (period%PRIME_RED==0)
+                {
+                	/* red */
+                    antibuddha_hit=TRUE;
+                	for (tempiter=0; tempiter<period/PRIME_DIVIDER; tempiter++)      
+            			StoreIterations(0,i,j,fx,fy, resx, resy);  
+                }
+            	
+                if (period%PRIME_GREEN==0)
+                {
+                	/* green */
+                    antibuddha_hit=TRUE;
+                    for (tempiter=0; tempiter<period/PRIME_DIVIDER; tempiter++)      
+            			StoreIterations(1,i,j,fx,fy, resx, resy);  
+                }
+                
+                if (period%PRIME_BLUE==0)
+                {
+                	/* blue */
+                    antibuddha_hit=TRUE;
+                    for (tempiter=0; tempiter<period/PRIME_DIVIDER; tempiter++)      
+            			StoreIterations(2,i,j,fx,fy, resx, resy);  
+                }
+            	
+            	if ((!antibuddha_hit) && (period!=1)) /* asm routine leads to period 1 ... */
+                {
+                    /* if no hit => increment all rgb-values */    
+                	StoreIterations(0,i,j,fx,fy, resx, resy);
+        			StoreIterations(1,i,j,fx,fy, resx, resy);
+        			StoreIterations(2,i,j,fx,fy, resx, resy);
+                }
+            }
+    		else
+            {
+      			/* no periodicity => false color image drawing partial orbits */		
+            	StoreIterations(0,RGB_ITER[FM_RED_MIN],RGB_ITER[FM_RED_MAX],fx,fy, resx, resy);  	
+            	StoreIterations(1,RGB_ITER[FM_GREEN_MIN],RGB_ITER[FM_GREEN_MAX],fx,fy, resx, resy);  
+            	StoreIterations(2,RGB_ITER[FM_BLUE_MIN],RGB_ITER[FM_BLUE_MAX],fx,fy, resx, resy);  		
+            }
+        }
+        else
+        {
+        	if (USE_HAMMAP)
+            {	
+            	/* Traditionally, fractals are "upside down" in FM.
+                   This is no problem for classic Mandelbrots, Multibrots, Julia sets etc.
+                   But it is a problem for the Burning Ship fractal (which is not
+                   symmetric relative to x- / real-axis.
+                   The consequence is that the SampleMap of the Burning Ship fractal is 
+                   not correct (flipped around the x-axis.
+                   To correct that, simply invert hmby and hmby2 for the SampleMap entry
+                 */	
+                
+                /* if x>0 => mark it in HAMMap (so that it won't be reused) */
+                if ((hmx<DD_WIDTH) && (hmx>=0) && (hmy>=0) && (hmy<DD_HEIGHT))
+                {	
+                    /*printf("Marking HAMMap[%u] (hmby: %u hmbx: %u hmy: %u hmx: %u) (MAX: hmx: %lu zx: %f)\n",
+                    	hmby*DD_WIDTH+hmx, hmby, hmbx, hmy, hmx, maxhmx, maxzx);
+                    */
+                    HAMMap[
+                    		/*hmby*/ hmby2*(DD_WIDTH>>HITMAP_SHIFT)+(hmx>>HITMAP_SHIFT)
+                          ]
+                          |=
+                          1<<(hmbx%32);
+                
+                
+                	/* symmetry for hitmap */
+                    if (USE_SYMMETRY) 
+                    {
+                    	  HAMMap[
+                    		/*hmby2*/ hmby*(DD_WIDTH>>HITMAP_SHIFT)+(hmx>>HITMAP_SHIFT)
+                          ]
+                          |=
+                          1<<(hmbx%32);
+                	}
+                }
+            } 
+        }
+    	
+    }    
+	else
+    {
+		/* nebula (Buddhabrot) */
+        deltaiter=MAX_ITERATIONS-i;
+        
+      	if (i!=0) 
+      	{
+      	  /* red */
+      	  	if ((deltaiter<RGB_ITER[FM_RED_MAX]) && (deltaiter>RGB_ITER[FM_RED_MIN]))
+      	  	{
+      	      StoreIterations(0,i,j,fx,fy, resx, resy);
+        	}
+        	/* green */
+        	if ((deltaiter<RGB_ITER[FM_GREEN_MAX]) && (deltaiter>RGB_ITER[FM_GREEN_MIN]))
+        	{
+        	    StoreIterations(1,i,j,fx,fy, resx, resy);
+        	}
+        	/* blue */
+        	if ((deltaiter<RGB_ITER[FM_BLUE_MAX]) && (deltaiter>RGB_ITER[FM_BLUE_MIN]))
+        	{
+        	    StoreIterations(2,i,j,fx,fy, resx, resy);
+        	}
+      	} 
+      	else
+      	{
+      		if (USE_HAMMAP)
+       	 	{
+            	/* Traditionally, fractals are "upside down" in FM.
+                   This is no problem for classic Mandelbrots, Multibrots, Julia sets etc.
+                   But it is a problem for the Burning Ship fractal (which is not
+                   symmetric relative to x- / real-axis.
+                   The consequence is that the SampleMap of the Burning Ship fractal is 
+                   not correct (flipped around the x-axis.
+                   To correct that, simply invert hmby and hmby2 for the SampleMap entry
+                 */	
+        	
+        	    /* if x==0 => mark it in HAMMap (so that it won't be reused) */
+        	    if ((hmx<DD_WIDTH) && (hmx>=0) && (hmy>=0) && (hmy<DD_HEIGHT))
+                {	
+                    HAMMap[
+                    		hmby2*(DD_WIDTH>>HITMAP_SHIFT)+(hmx>>HITMAP_SHIFT)
+                          ]
+                          |=
+                          1<<(hmbx%32);
+                
+                
+                	/* symmetry for hitmap */
+                    if (USE_SYMMETRY) 
+                    {
+                    	  HAMMap[
+                    		hmby*(DD_WIDTH>>HITMAP_SHIFT)+(hmx>>HITMAP_SHIFT)
+                          ]
+                          |=
+                          1<<(hmbx%32);
+                	}
+                }
+        	}
+      	} 
+    }
+    
+    /* use periodicity iterations for antibuddha */
 	if (loopcounter%50==0)
 	{
-			/* give user possibility to interrupt calculation every 50ieth loop */
+		/* give user possibility to interrupt calculation every 50ieth loop */
 		if (InterruptDrawing(Win,a1,b1,a2,b2)) stop=1;
 		
 		if (!showpoints)
 		{				
-			/* if ((stop) || (loopcounter%redrawcounter==0)) /* 50000 */ 
 			CurrentTime (&newseconds,&StartTicks);
 			deltaseconds=newseconds-lastdeltaseconds;
-			
-			/*if (loopcounter%redrawcounter==0)*/
-			if ((!stop) && (deltaseconds>=refreshseconds))
+
+            if ((!stop) && (deltaseconds>=refreshseconds))
 			{
-				lastdeltaseconds=newseconds;
+				/* deltaseconds "stabilizes" at 1, 2, 8, 16, 32, 64 seconds (approx. 1 minute) */			
+				accumulated_delta_for_autosave+=deltaseconds;
+                
+                lastdeltaseconds=newseconds;
 				if (refreshseconds<=60) refreshseconds*=2;
-				/*printf("refreshseconds: %u deltaseconds: %u\n", refreshseconds, deltaseconds);*/
-				
+
 				/* find new maxcounters */
-				maxred=maxgreen=maxblue=0;
-				for (offset=0; offset<resx*resy; offset++)
-				{
-					if (BuddhaCounter[offset]>maxred) maxred=BuddhaCounter[offset];
-					if (BuddhaCounter[offset+histoffsetgreen]>maxgreen) maxgreen=BuddhaCounter[offset+histoffsetgreen];
-					if (BuddhaCounter[offset+histoffsetblue]>maxblue) maxblue=BuddhaCounter[offset+histoffsetblue];
-				}
-				
+				FindMaxCounters(BuddhaCounter,resx,resy,&maxred,&maxgreen,&maxblue);			
+
+                fr=255.0/sqrt((double)maxred); 
+                fg=255.0/sqrt((double)maxgreen); 
+                fb=255.0/sqrt((double)maxblue); 
+
 				for (y=b1; y<=b2; y++) 
 				{
 					offset=y*resx;
 					for (x=a1; x<=a2; x++) 
 					{
-						divred=max(maxred,1);
-						divgreen=max(maxgreen,1);
-						divblue = max(maxblue,1);
+                    	/* FindMaxCounters() returns always max >= 1 */
+						buddhared   = fr * sqrt((double)BuddhaCounter[offset+x]); 
+						buddhagreen = fg * sqrt((double)BuddhaCounter[histoffsetgreen+offset+x]); 
+						buddhablue  = fb * sqrt((double)BuddhaCounter[histoffsetblue+offset+x]); 
 						
-						buddhared   = 255 * sqrt((double)BuddhaCounter[offset+x]) / sqrt((double)divred); 
-						buddhagreen = 255 * sqrt((double)BuddhaCounter[histoffsetgreen+offset+x]) / sqrt((double)divgreen);
-						buddhablue  = 255 * sqrt((double)BuddhaCounter[histoffsetblue+offset+x]) / sqrt((double)divblue);
-						
-						/* PutPixel(x,y,Color); */
 						PutPixelRGB(x,y, buddhared, buddhagreen, buddhablue);
 					}
 				}
-				
+
+                if (accumulated_delta_for_autosave>=HISTOGRAM_AUTOSAVE_TIME)
+                {
+                	/* autosave */	
+                    if (autosave_count>0)
+                    {
+                    	/* first backup old autosave */
+                    	Execute("copy AUTOSAVE.IFF AUTOSAVE1.IFF", NULL, NULL);
+						Execute("copy AUTOSAVE.IFF.HST AUTOSAVE1.IFF.HST", NULL, NULL);
+                    }
+                    
+                    /* now write new backup */
+
+                    if ((USE_HAMMAP  || BUDDHA_EDGES || BUDDHA_LEMNISCATES) && HITMAP_AT_THE_END) ShowHAMMap(edgequeue, queue_i, lemniscates, lemni_i);
+                    
+                    strcpy(MYPATH,"AUTOSAVE.IFF");
+                    
+                    PrepareAndSaveAllNewSpecialChunkPic(&MYILBM);
+                    
+                    if ((USE_HAMMAP  || BUDDHA_EDGES || BUDDHA_LEMNISCATES) && HITMAP_DURING_CALCULATION && (!HITMAP_AT_THE_END)) ShowHAMMap(edgequeue, queue_i, lemniscates, lemni_i);	
+                	
+                    accumulated_delta_for_autosave=0;
+                    autosave_count++;
+                }
+                else if ((USE_HAMMAP || BUDDHA_EDGES || BUDDHA_LEMNISCATES) && HITMAP_DURING_CALCULATION) ShowHAMMap(edgequeue, queue_i, lemniscates, lemni_i);
+                
 				if (!stop)
 				{
-					sprintf(MaxTxt,"%u:%d|%d|%d",loopcounter,maxred,maxgreen,maxblue);
+					sprintf(MaxTxt,"%u -> %d %d %d",loopcounter,maxred,maxgreen,maxblue);				
 					if (SHOW_MAXCOUNTERS) PrintIText(Win->RPort,&BTxt,0,0);	
 				} else return TRUE;
 			}
 		}
-		/* if (loopcounter==200000) stop=TRUE; */
 
-	}
+        if ((BUDDHA_MAX_LOOPS) && (loopcounter >= BUDDHA_MAX_LOOPS)) stop=TRUE;
+		CurrentTime (&EndSec,&EndTicks);
+        if ((FM_MAX_CALC_SECS) && ((EndSec-StartSec)>FM_MAX_CALC_SECS)) stop=TRUE;
+    }
  }
-
- if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
 
  CurrentTime (&EndSec,&EndTicks);
 
- DisplayBeep (Win->WScreen);
-
  /* draw fractal in the end */
  /* find new maxcounters */
- maxred=maxgreen=maxblue=0;
- for (offset=0; offset<resx*resy; offset++)
- {
-	if (BuddhaCounter[offset]>maxred) maxred=BuddhaCounter[offset];
-	if (BuddhaCounter[offset+histoffsetgreen]>maxgreen) maxgreen=BuddhaCounter[offset+histoffsetgreen];
-	if (BuddhaCounter[offset+histoffsetblue]>maxblue) maxblue=BuddhaCounter[offset+histoffsetblue];
- }
-				
+ FindMaxCounters(BuddhaCounter,resx,resy,&maxred,&maxgreen,&maxblue);
+
+ fr=255.0/sqrt((double)maxred); 
+ fg=255.0/sqrt((double)maxgreen);
+ fb=255.0/sqrt((double)maxblue); 
+                                		
  for (y=b1; y<=b2; y++) 
  {
 	offset=y*resx;
 	for (x=a1; x<=a2; x++) 
 	{
-		divred=max(maxred,1);
-		divgreen=max(maxgreen,1);
-		divblue = max(maxblue,1);
+		buddhared   = fr * sqrt((double)BuddhaCounter[offset+x]); 
+		buddhagreen = fg * sqrt((double)BuddhaCounter[histoffsetgreen+offset+x]); 
+		buddhablue  = fb * sqrt((double)BuddhaCounter[histoffsetblue+offset+x]); 
 						
-		buddhared   = 255 * sqrt((double)BuddhaCounter[offset+x]) / sqrt((double)divred); 
-		buddhagreen = 255 * sqrt((double)BuddhaCounter[histoffsetgreen+offset+x]) / sqrt((double)divgreen);
-		buddhablue  = 255 * sqrt((double)BuddhaCounter[histoffsetblue+offset+x]) / sqrt((double)divblue);
-						
-		/*PutPixel(x,y,Color); */
 		PutPixelRGB(x,y, buddhared, buddhagreen, buddhablue);
 	}
  }
-				
- /*printf("Seconds: %u Ticks: %u Ticks/second: %d\n", EndSec-StartSec, EndTicks-StartTicks, (EndTicks-StartTicks)/(EndSec-StartSec)); */
- /*printhistogramstats(); */
  
- if ((algorithm_buddha!=BUDDHA_RANDOM) && (Done)) DeallocateBoundary();
+ if ((USE_HAMMAP || BUDDHA_EDGES || BUDDHA_LEMNISCATES) && HITMAP_AT_THE_END) ShowHAMMap(edgequeue, queue_i, lemniscates, lemni_i);
  
+ if (TMASK & MASK) ShowTitle (Win->WScreen,TRUE);
+ 	
  BUDDHA_RESUME=FALSE;
- MenuResumeOff(Win); 
+ MenuResumeOff(Win);
+ 
+ /* do allocations / freeing via AllocBuddha() / FreeBuddha() */
+ 
+ /* Boundary algorithm doesn't free memory when calculating for Nebulabrots */
+ /* => in this case the memory must be freed here */
+ if ((BUDDHA_EDGES) || (BUDDHA_LEMNISCATES)) DeallocateBoundary(); 
+ 
+ FMG_BUDDHA_ZOOM_IN=FALSE;
+ 
+ OnTitle(MYILBM.scr);
  
  return (EndSec-StartSec);
 }
+
+/************************************************************************************
+*************************************************************************************/
+
+

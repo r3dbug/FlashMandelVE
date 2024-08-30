@@ -1,8 +1,28 @@
+#
+# smake all: fast compile with actual SCOptions (already compiled object files 
+#            wont be recompiled)
+#
+# smake debug: creates an new (clean) executable with full symbol definitions 
+#			   and line debugging (slow, object files will be deleted)
+#              SCOptions_DEBUG flags are used.
+#
+# smake nodebug: creates a new (clean) executable with no debug information
+#                (slow, object files will be deleted)
+#                SCOptions_NODEBUG flags are used.
+#
+# smake clean: delete manually C objects files
+#
+# smake cleanall: clean manually all (= C and ASM) object files (rebuild completely
+#                 from zero)
+#
+# smake full: rebuild completely from zero with actual SCOptions flags
+#
+
 CC = sc
 AS = vasm
 
 ASMOBJS = Modules/Mandel.o Modules/Julia.o Modules/Fractals.o detectvamp.o
-CMODULES = Modules/ColorWindow.o Modules/Iff.o Modules/Gfx.o
+CMODULES = Modules/ColorWindow.o Modules/Iff.o Modules/Gfx.o # Modules/delay.o # Modules/UltimateExpansion.o
 COBJS = $(CMODULES) math_functions.o  rle.o histogram.o fmglobals.o fmcgx.o drawing.o symmetry.o shared.o classic.o vampire.o splash.o SAFP.o menu.o version.o fmevents.o FlashMandel.o
 
 ASMFLAGS = -m68080 -Fhunk
@@ -11,7 +31,32 @@ ASMFLAGS = -m68080 -Fhunk
 
 all: $(COBJS) $(ASMOBJS)
 	$(CC) link $(COBJS) $(ASMOBJS)
-    copy FlashMandel /
+	copy FlashMandel /
+
+full: $(COBJS) $(ASMOBJS)
+	smake cleanall
+    smake all 
+    
+debug: $(COBJS) $(ASMOBJS)
+	copy SCOptions SCOptions.bak
+	copy FlashMandel.lnk FlashMandel.lnk.bak
+	copy SCOptions_DEBUG SCOptions
+    copy FlashMandel_DEBUG.lnk FlashMandel.lnk
+ASMFLAGS = $(ASMFLAGS) -linedebug
+    smake cleanall
+    smake all	
+    copy SCOptions.bak SCOptions
+	copy FlashMandel.lnk.bak FlashMandel.lnk
+
+nodebug: $(COBJS) $(ASMOBJS)
+	copy SCOptions SCOptions.bak
+	copy FlashMandel.lnk FlashMandel.lnk.bak
+	copy SCOptions_NODEBUG SCOptions
+    copy FlashMandel_NODEBUG.lnk FlashMandel.lnk
+    smake cleanall
+    smake all	
+    copy SCOptions.bak SCOptions
+	copy FlashMandel.lnk.bak FlashMandel.lnk
     
 Modules/Mandel.o: Modules/Mandel.S
 	$(AS) $(ASMFLAGS) Modules/Mandel.S -o Modules/Mandel.o
@@ -41,7 +86,7 @@ Gfx.o: Gfx.h Gfx.c
 
 version.o: version.h version.c
 	$(CC) $(CFLAGS) version.c NOLINK
-    
+
 math_functions.o: math_functions.h math_functions.c
 	$(CC) $(CFLAGS) math_functions.c NOLINK
     
@@ -83,7 +128,7 @@ drawing.o: drawing.h drawing.c
     
 splash.o: splash.h splash.c
 	$(CC) $(CFLAGS) splash.c NOLINK
-   
+
 clean:
 	delete \#?.o   
 

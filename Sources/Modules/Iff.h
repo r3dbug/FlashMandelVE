@@ -4,8 +4,6 @@
 
 #include <proto/exec.h>
 #include <proto/intuition.h>
-/*#include <proto/graphics.h>*/
-#include "/fmprotographics.h"
 #include <proto/iffparse.h>
 
 #include <exec/types.h>
@@ -13,9 +11,6 @@
 #include <intuition/screens.h>
 #include <graphics/gfxbase.h>
 
-/*#include <iffp/iff.h>
-#include <iffp/ilbm.h>
-*/
 #include <libraries/iffparse.h>
 #include <iffp/ilbmapp.h>
 #include <iffp/packer.h>
@@ -26,14 +21,10 @@
 
 extern UBYTE *omodes [];
 
-static BYTE *PutDump(BYTE *,int);
-
-static BYTE *PutRun(BYTE *,int,int);
 extern struct Library* IntuitionBase;
 
 #define MaxSrcPlanes (25)
 
-/*#define ID_MAND MAKE_ID('M','A','N','D') /* this is defined twice ?! (see FlashMandel.c) */
 #define ID_NEWMAND MAKE_ID ('F', 'M', 'V', 'E')
 
 #define NOMAND 4L
@@ -74,7 +65,9 @@ LONG SavePalette (struct ILBMInfo *,struct Chunk *,UBYTE *);
 
 LONG LoadPalette (struct ILBMInfo *,UBYTE *, UBYTE*);
 
+/*
 static LONG SAVEDS ASMCALL stdio_stream (REG (a0, struct Hook *),REG (a2,struct IFFHandle *),REG (a1,struct IFFStreamCmd *));
+*/
 
 LONG saveilbm (struct ILBMInfo *,struct BitMap *,ULONG,WORD,WORD,WORD,WORD,APTR,UWORD,UWORD,WORD,WORD,struct Chunk *,struct Chunk *,UBYTE *);
 
@@ -120,10 +113,6 @@ LONG currentchunkis (struct IFFHandle *,LONG,LONG);
 
 UBYTE *findpropdata (struct IFFHandle *,LONG,LONG);
 
-static BYTE *PutDump (BYTE *,int);
-
-static BYTE *PutRun (BYTE *,int,int);
-
 LONG PackRow (BYTE **,BYTE **,LONG);
 
 BOOL UnPackRow (BYTE **,BYTE **,WORD,WORD);
@@ -131,14 +120,6 @@ BOOL UnPackRow (BYTE **,BYTE **,WORD,WORD);
 extern LONG PackPutSize;
 
 extern char PackBuffer [];  /* [TBD] should be 128?  on stack?*/
-
-/*struct MandelChunk { WORD LeftEdge,TopEdge,Width,Height;
-                     double RMin,RMax,IMin,IMax;
-                     double RConst,IConst;
-                     ULONG Iterations;
-                     ULONG Special;
-                   };
-*/
 
 /* additional iff / ilbm functions (from official IFF source code) */
 

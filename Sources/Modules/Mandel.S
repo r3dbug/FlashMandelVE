@@ -74,10 +74,13 @@
         XDEF  _Mandel68k_FPU_Vampire			; accelerated for Vampire
 		XDEF  _Mandel68k_FPU_Classic			; original algorithm (for 68881/2)
 		
+        XDEF  _Mandel68k_FPU_Classic_SI			; SI = store iterations
+		
 		; parallelized routine 
 		; (= 4 pixels are calculated in 1 loop)
 		XDEF _par4iterateasm					; used for MVLine_Vampire() and MHLine_Vampire()
-		XDEF _powFPU
+		
+        XDEF _powFPU
 		XDEF _sinFPU
 		XDEF _cosFPU
 		XDEF _sincosFPU
@@ -87,21 +90,59 @@
 		
         XREF _GlobalCOS
         XREF _GlobalSIN
+
+_rts	dc.l 0
+_d0		dc.l 0
+
+;seregs:
+;; this replaces an fmovem e0-e23,-(sp) 
+;; (instruction doesn't exist)
+;	move.l d0,_d0
+;    move.l (sp)+,_rts
+;    moveq	#40,d0		; index of e0
+;.lp:
+;	storei	d0,-(sp)
+;    addq.w  #1,d0
+;    cmpi.w  #63,d0		; index of e23
+;    ble.s   .lp
+;
+;	move.l  _d0,d0    
+;    move.l  _rts,-(sp)
+;    rts
         
+;reregs:
+;; this replaces an fmovem (sp)+,e0-e23 
+;; (instruction doesn't exist)
+;	move.l  d0,_d0
+;	move.l  (sp)+,_rts	
+;    moveq	#63,d0		; index of e23
+;.lp:    
+;	loadi   (sp)+,d0
+;	subq.w  #1,d0
+;    cmpi.w  #40,d0		; index of e0
+;    bge.s	.lp
+;    
+;	move.l  _d0,d0
+;	move.l  _rts,-(sp)
+;    rts
+           
 _par4iterateasm:
 	; parameters
 	; fp0/fp1: x1, y1 (point 1)	-- regs: e2-e6	(=0)
 	; fp2/fp3: x2, y2 (point 2) -- regs: e7-e11 (+5)
-	; fp4/fp5: x3, y3 (point 2) -- regs: e12-e16 (+10)
-	; fp6/fp7: x4, y4 (point 2) -- regs: e17-e22 (+15)
+	; fp4/fp5: x3, y3 (point 3) -- regs: e12-e16 (+10)
+	; fp6/fp7: x4, y4 (point 4) -- regs: e17-e22 (+15)
 	; d1: MaxIter
 	
 	; prepare
-	fmovem  fp2-fp7,-(sp)
+    ;bsr     _MultiTaskOff	
+    fmovem  fp2-fp7,-(sp)
 	movem.l d0-d3,-(sp)
+    ;bsr     seregs
 	clr.l   d0			; d0: mark points as "not done" (0)
 	fmove.d _BAILOUT_VALUE,e0
-	; start
+	
+    ; start
 	move.w  #0,_IterP1	; default value = 0
 	fmove   fp1,e3		; i (y1)
 	fmove   fp0,e2		; r (x1)
@@ -251,8 +292,10 @@ _par4iterateasm:
 	dbra.w  d1,.loop4
 	
 .4exit:
-	movem.l (sp)+,d0-d3
+	;bsr     reregs
+    movem.l (sp)+,d0-d3
 	fmovem  (sp)+,fp2-fp7
+    ;bsr     _MultiTaskOn	
 	rts
 	
 ; *******************
@@ -261,7 +304,8 @@ _Mandel68k_FPU_Vampire:
 	; fmovem   fp0-fp1,-(sp)		; fp0/1 = scratch registers
 	fmove   fp1,e3		; i
 	fmove   fp0,e2		; r
-
+	fmove.d _BAILOUT_VALUE,e0
+    
 .loop9:
 	; (1)
 	fmul    e2,e2,e4	; r2=r*r
@@ -270,8 +314,9 @@ _Mandel68k_FPU_Vampire:
 	fadd    e4,e5,e6    ; r2+i2
 	fmul    e2,e3		; do this instruction here (for free:)
 	; (3)
-	fcmp.s  #4,e6		; >=4?
-	fbgt    .exit9
+	;fcmp.s  #4,e6		; >=4?
+	fcmp	e0,e6		; cmp with BAILOUT_VALUE	
+    fbgt    .exit9
 	; (4)
 	fsub    e5,e4,e2
 	fadd    e3,e3
@@ -321,6 +366,57 @@ Exit:
         rts  * return Iterations
 
 
+_Mandel68k_FPU_Classic_SI:
+        movem.l  a0-a1/d1,-(sp)
+        fmovem fp0-fp7,-(sp)
+        
+        move.l   d0,d1
+        add.l    #1,d1
+        asl.l    #3,d1
+        
+        movem.l  _re,a0
+        movem.l  _im,a1
+        
+        add.l    d1,a0
+        add.l    d1,a1
+        
+        fmove.x fp1,fp3  * Zi = Cim                ; fp1/3: y
+        fmove.x fp0,fp2  * Zr = Cre                ; fp0/2: x
+        
+		fmove.d _BAILOUT_VALUE,fp6
+.Loop:
+		
+        fmove.x fp3,fp4  * zi2  =  zi               ; fp1/3/4: y
+        fmul.x  fp2,fp3  * zi   =  zr * zi          ; fp2: x*y
+        fmul.x  fp2,fp2  * zr   =  zr * zr          
+        fmul.x  fp4,fp4  * zi2 *=  zi
+        fmove.x fp2,fp5  * dist =  zr
+        fadd.x  fp4,fp5  * dist += zi2
+        fcmp.x  fp6,fp5  * cmp  MaxDist  dist
+        fbgt.w  .Exit     * if   dist > MaxDist  exit
+        fadd.x  fp3,fp3  * zi   += zi
+        fsub.x  fp4,fp2  * zr   -= zi2
+        fadd.x  fp1,fp3  * zi   += Cim
+        fadd.x  fp0,fp2  * zr   += Cre
+
+		; predecrement is faster than indexed		
+        fmove.d fp3,-(a1)
+        fmove.d fp2,-(a0)
+        
+        ;fmove.d  fp2,(a0,d0*8)
+        ;fmove.d  fp3,(a1,d0*8)
+        
+        dbra.w  d0,.Loop  * if --Iterations go to Loop
+        moveq.l #0,d0    * Iterations = 0
+
+.Exit:	
+		fmove.d  fp2,_FinalXP1		; needed for smooth coloring
+		fmove.d  fp3,_FinalYP1
+        fmovem 	 (sp)+,fp0-fp7
+        movem.l	 (sp)+,a0-a1/d1;
+        rts  * return Iterations
+
+
 ; ******************** Multibrot Floating Point
 
 _MultiMandelFloatingPoint_FPU:
@@ -328,8 +424,8 @@ _MultiMandelFloatingPoint_FPU:
 ; fp1: y
 ; d0: MaxIter
 
-		fmove   fp0,fp2
-		fmove   fp1,fp3
+		;fmove   fp0,fp2
+		;fmove   fp1,fp3
 		
 
 		rts
@@ -371,67 +467,62 @@ PIDIV2NEG  	EQU     -1.57079632679489661923132169163
 _atan2FPU:
 ; fp0: x
 ; fp1: y
-		fcmp.s  #0,fp0			; compare x
+        		
+        fmove   fp0,e0
+        fmove   fp1,e1
+        fdiv   	fp0,fp1			; y/x -> start div to have it ready later
+        		
+        fcmp.s  #0,e0			; compare x
 		fbgt    .xgtzero		; x>0 !   (1x)
-		fbeq    .xiszero		; x==0 !  (2x)
-		
-		fcmp.s  #0,fp1			; compare y
-		fbeq    .yiszero		; y==0 !  (1x)
-		
-		; x<0
-		fcmp.s  #0,fp1			; compare y
-		fbgt    .xltzeroygtzero ; x<0 && y>0  (1x)
-		fblt    .xltzeroyltzero ; x<0 && y<0  (1x)
-		
-		fmove.s #0,fp0
-		rts
-
-.xltzeroyltzero:
-		fdiv    fp0,fp1			; y/x
-		fmove   fp1,fp0
-		fatan   fp0
-		fadd.d   #PINEG,fp0
-		rts
-		
-.xltzeroygtzero:
-		fdiv    fp0,fp1			; y/x
-		fmove   fp1,fp0
-		fatan   fp0
-		fadd.d  #PI,fp0
-		rts 
-				
-.yiszero:
-		fcmp.s  #0,fp0			; compare x
-		fblt    .y0xltzero		; y==0 && x<0 !
-		fmove.s #0,fp0
-		rts
-
-
-.y0xltzero:
-		fmove.d  #PINEG,fp0		; return -PI
-		rts
-
-.xiszero:
-		fcmp.s  #0,fp1			; compare y
-		fbgt	.ygtzero		; y>0 !
-		fblt    .yltzero		; y<0 !
-		fmove.s #0,fp0
-		rts
-		
-.yltzero:
-		fmove.d  #PIDIV2NEG,fp0
+		fblt    .xltzero
+        
+        ; x==0
+		fcmp.s  #0,e1			; compare y
+		fbgt    .ygtzero		; y>0
+        fblt	.yltzero		; y<0
+        
+        ; x==0 and y==0
+        fmove.s  #0,fp0		; return 0
 		rts
 
 .ygtzero:
-		fmove.d   #PIDIV2,fp0
-		rts
-		
+		; x==0 and y>0
+        fmove.d  #PIDIV2,fp0
+        rts
+
+.yltzero:
+		; x==0 and y<0
+        fmove.d  #PIDIV2NEG,fp0
+        rts
+
 .xgtzero:
-		fdiv    fp0,fp1			; y/x
 		fmove   fp1,fp0
 		fatan   fp0				; arctan(y/x)	
-		rts
+        rts
 
+.xltzero:
+        fcmp.s  #0,e1			; compare y
+        fbgt    .ygtzero1
+        fblt    .yltzero1
+        
+        ; x<0 and y==0
+        fmove.d  #PI,fp0		; return PI
+        rts
+
+.ygtzero1:
+		; x<0 and y>0
+        fmove    fp1,fp0
+        fatan    fp0
+        fadd.d	 #PI,fp0
+        rts
+
+.yltzero1:
+		; x<0 and y<0
+        fmove    fp1,fp0
+        fatan	 fp0
+        fsub.d   #PI,fp0
+        rts
+        
 ; **********************************************************************
 
 _atan2andpowFPU:

@@ -2,7 +2,7 @@
 /**************************************************************************************
  *                                                                                    *
  * Histograms can be saved as a raw file or compressed with rle algorithm.            *
- * To avoid any problems in the future, the compressed file conains a header of       *
+ * To avoid any problems in the future, the compressed file contains a header of       *
  * two longwords that identify the compressed data and the algorithm used.            *
  *                                                                                    *
  **************************************************************************************
@@ -21,24 +21,6 @@ UBYTE* AddFilenameExtension(UBYTE* original)
 	return extended_filename;
 }
 
-/*
-void PrintHistData(ULONG* data)
-{
-	ULONG p, n;
-
-	p=n=0;
-	while ((p<100000) && (n<20))
-	{
-		if (data[p])
-		{
-			printf("%u: data[%u] = %u\n", n, p, data[p]);
-			n++;
-		}
-		p++;
-	}
-}
-*/
-
 ULONG SaveHistogram(UBYTE* filename, ULONG* data, ULONG size, ULONG algorithm)
 {
 	FILE* fh;
@@ -48,8 +30,6 @@ ULONG SaveHistogram(UBYTE* filename, ULONG* data, ULONG size, ULONG algorithm)
 	
 	/* printf("SaveHistogramRAW(): data: %p size: %u algorithm: %u\n", data, size, algorithm); */
 
-	/* PrintHistData(data); */
-	
 	if (fh=fopen(filename, "w"))
 	{ 
 		if (algorithm)
@@ -142,8 +122,6 @@ ULONG LoadHistogram(UBYTE* filename, ULONG* data, ULONG size)
 						rewind(fh);
 						error=HISTERR_SAMESIZE;
 					}
-					
-					/* PrintHistData(data); */
 					
 				} else error=HISTERR_READERROR;
 				

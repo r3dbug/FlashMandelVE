@@ -71,11 +71,11 @@
 **    Function will save the icon file too with support for NewIcons.
 **
 ******************************************************************************/
-
+/*
 #ifndef FLASHMANDEL_RB
 #define FLASHMANDEL_RB
 #endif
-
+*/
 #include "Iff.h"
 
 UBYTE *omodes [2] = {"r","w"};
@@ -168,7 +168,10 @@ LONG getbitmap(struct ILBMInfo *ilbm)
                 for(k=0; k<deep && (!error); k++) 
                     {
                     if(!(ilbm->brbitmap->Planes[k] = AllocRaster(wide,high))) 
+                    {
                         error = 1;
+                        /* on uae this typically fails for big images because not enough chipmem available ... */
+                    }
                     if(! error)
                         BltClear(ilbm->brbitmap->Planes[k],RASSIZE(wide,high),0);
                     }
@@ -224,7 +227,7 @@ void freebitmap(struct ILBMInfo * ilbm)
 
 LONG loadbrush(struct ILBMInfo *ilbm, UBYTE *filename)
 {
-LONG error = 0L;
+	LONG error = 0L;
 
     if(!(ilbm->ParseInfo.iff))  return(CLIENT_ERROR);
 
@@ -292,15 +295,15 @@ LONG saveilbm (struct ILBMInfo *ilbm,struct BitMap *bitmap,
                struct Chunk *chunklist1,struct Chunk *chunklist2,
                UBYTE *filename)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
+ 
+  struct Chunk *chunk;
 
-struct Chunk *chunk;
+  ULONG chunkID;
 
-ULONG chunkID;
+  UBYTE *bodybuf;
 
-UBYTE *bodybuf;
-
-LONG size, error;
+  LONG size, error;
 
   iff = ilbm->ParseInfo.iff;
 
@@ -379,9 +382,9 @@ LONG size, error;
 
 LONG openifile (struct ParseInfo *pi, UBYTE *filename, ULONG iffopenmode)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
-LONG error = CLIENT_ERROR;
+  LONG error = CLIENT_ERROR;
 
   if (! pi) return (error);
 
@@ -413,7 +416,7 @@ LONG error = CLIENT_ERROR;
 
 void closeifile (struct ParseInfo *pi)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
   if (! pi) return;
 
@@ -443,11 +446,11 @@ struct IFFHandle *iff;
  */
 static LONG SAVEDS ASMCALL stdio_stream (REG (a0,struct Hook *hook),REG (a2,struct IFFHandle *iff),REG (a1,struct IFFStreamCmd *actionpkt))
 {
-register FILE *stream;
-register LONG nbytes;
-register LONG actual;
-register UBYTE *buf;
-LONG len;
+  register FILE *stream;
+  register LONG nbytes;
+  register LONG actual;
+  register UBYTE *buf;
+  LONG len;
 
   stream = (FILE *) iff->iff_Stream;
 
@@ -498,7 +501,7 @@ LONG len;
 
 void initiffasstdio (struct IFFHandle *iff)
 {
-static struct Hook stdiohook = {{NULL},(ULONG (*)()) stdio_stream,NULL,NULL};
+  static struct Hook stdiohook = {{NULL},(ULONG (*)()) stdio_stream,NULL,NULL};
 
 /*
  * Initialize the IFF structure to point to the buffered I/O
@@ -514,7 +517,7 @@ static struct Hook stdiohook = {{NULL},(ULONG (*)()) stdio_stream,NULL,NULL};
 
 LONG PutCk (struct IFFHandle *iff,long id,long size,void *data)
 {
-LONG error,wlen;
+  LONG error,wlen;
 
   if (! (error = PushChunk (iff,0,id,size)))
   {
@@ -596,13 +599,13 @@ LONG initbmhd (BitMapHeader *bmhd, struct BitMap *bitmap,
 
 LONG putcmap (struct IFFHandle *iff,APTR colortable,UWORD ncolors,UWORD bitspergun)
 {
-LONG error, offs;
+  LONG error, offs;
 
-UWORD  *tabw;
+  UWORD  *tabw;
 
-UBYTE *tab8;
-
-ColorRegister cmapReg;
+  UBYTE *tab8;
+ 
+  ColorRegister cmapReg;
 
   if ((! iff) || (! colortable)) return (CLIENT_ERROR);
 
@@ -679,25 +682,25 @@ ColorRegister cmapReg;
 
 LONG putbody (struct IFFHandle *iff, struct BitMap *bitmap, BYTE *mask,BitMapHeader *bmhd, BYTE *buffer, LONG bufsize)
 {
-LONG error;
+  LONG error;
 
-LONG rowBytes = bitmap->BytesPerRow;   /* for source modulo only */
+  LONG rowBytes = bitmap->BytesPerRow;   /* for source modulo only */
 
-LONG FileRowBytes = RowBytes (bmhd->w); /* width to write in bytes */
+  LONG FileRowBytes = RowBytes (bmhd->w); /* width to write in bytes */
 
-int dstDepth = bmhd->nPlanes;
+  int dstDepth = bmhd->nPlanes;
 
-UBYTE compression = bmhd->compression;
+  UBYTE compression = bmhd->compression;
 
-int planeCnt;                          /* number of bit planes including mask */
+  int planeCnt;                          /* number of bit planes including mask */
 
-register int iPlane, iRow;
+  register int iPlane, iRow;
 
-register LONG packedRowBytes;
+  register LONG packedRowBytes;
 
-BYTE *buf;
+  BYTE *buf;
 
-BYTE *planes [MAXSAVEDEPTH + 1];        /* array of ptrs to planes & mask */
+  BYTE *planes [MAXSAVEDEPTH + 1];        /* array of ptrs to planes & mask */
 
   if ( bufsize < MaxPackedSize (FileRowBytes) ||  /* Must buffer a comprsd row*/
 
@@ -766,17 +769,17 @@ BYTE *planes [MAXSAVEDEPTH + 1];        /* array of ptrs to planes & mask */
 
 LONG loadcmap (struct ILBMInfo *ilbm)
 {
-struct StoredProperty *sp;
+  struct StoredProperty *sp;
 
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
-BOOL AllShifted;
+  BOOL AllShifted;
 
-UBYTE *rgb, rb, gb, bb;
+  UBYTE *rgb, rb, gb, bb;
 
-LONG k;
+  LONG k;
 
-ULONG ncolors, gun, ncheck, nc, r, g, b;
+  ULONG ncolors, gun, ncheck, nc, r, g, b;
 
   if (! (iff = ilbm->ParseInfo.iff)) return (CLIENT_ERROR);
 
@@ -892,13 +895,13 @@ ULONG ncolors, gun, ncheck, nc, r, g, b;
 
 LONG loadcmapRGB (struct ILBMInfo *ilbm, UBYTE* clut)
 {
-BOOL AllShifted;
+  BOOL AllShifted;
 
-UBYTE *rgb, rb, gb, bb;
+  UBYTE *rgb, rb, gb, bb;
 
-LONG k;
+  LONG k;
 
-ULONG ncolors, gun, ncheck, nc, r, g, b;
+  ULONG ncolors, gun, ncheck, nc, r, g, b;
 
   if (! (ilbm->colortable)) return (1L);
 
@@ -920,10 +923,8 @@ ULONG ncolors, gun, ncheck, nc, r, g, b;
 
   /* how many colors to check for shifted nibbles (i.e. used colors) */
 
-  /* printf("loadcmapRGB(): ilbm->Bmhd.nPlanes: %u\n", ilbm->Bmhd.nPlanes); */
   ncheck = 1L << ilbm->Bmhd.nPlanes;
 
-  /* printf("loadcmapRGB(): ncheck: %u\n", ncheck); */
   if (ncheck > ncolors) ncheck = ncolors;
 
   if ((! (ilbm->IFFPFlags & IFFPF_NOCOLOR32)) && (ilbm->colorrecord))
@@ -1014,9 +1015,9 @@ ULONG ncolors, gun, ncheck, nc, r, g, b;
 
 LONG getcolors (struct ILBMInfo *ilbm)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
-LONG error = CLIENT_ERROR;
+  LONG error = CLIENT_ERROR;
 
   if (! (iff = ilbm->ParseInfo.iff)) return (error);
 
@@ -1037,15 +1038,15 @@ LONG error = CLIENT_ERROR;
 
 LONG alloccolortable (struct ILBMInfo *ilbm)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
-struct StoredProperty *sp;
+  struct StoredProperty *sp;
 
-LONG error = NULL;
+  LONG error = NULL;
 
-ULONG ctabsize;
+  ULONG ctabsize;
 
-UWORD ncolors;
+  UWORD ncolors;
 
   if (! (iff = ilbm->ParseInfo.iff)) return (CLIENT_ERROR);
 
@@ -1096,15 +1097,11 @@ UWORD ncolors;
 
 LONG alloccolortableRGB (struct ILBMInfo *ilbm)
 {
-/*struct IFFHandle *iff;
+	LONG error = NULL;
 
-struct StoredProperty *sp;
-*/
-LONG error = NULL;
+	ULONG ctabsize;
 
-ULONG ctabsize;
-
-UWORD ncolors;
+	UWORD ncolors;
 
      /*
       * Compute the size table we need
@@ -1167,9 +1164,9 @@ VOID freecolors (struct ILBMInfo *ilbm)
 
 LONG currentchunkis (struct IFFHandle *iff,LONG type,LONG id)
 {
-register struct ContextNode *cn;
+  register struct ContextNode *cn;
 
-LONG result = 0;
+  LONG result = 0;
 
   if (cn = CurrentChunk (iff))
 
@@ -1182,11 +1179,11 @@ LONG result = 0;
 
 LONG loadbody (struct IFFHandle *iff,struct BitMap *bitmap,BitMapHeader *bmhd)
 {
-BYTE *buffer;
+  BYTE *buffer;
 
-ULONG bufsize;
+  ULONG bufsize;
 
-LONG error = 1L;
+  LONG error = 1L;
 
   if (! (currentchunkis (iff,ID_ILBM,ID_BODY))) return (IFF_OKAY);
 
@@ -1206,29 +1203,29 @@ LONG error = 1L;
 
 LONG loadbody2 (struct IFFHandle *iff,struct BitMap *bitmap,BYTE *mask,BitMapHeader *bmhd,BYTE *buffer,ULONG bufsize)
 {
-UBYTE srcPlaneCnt = bmhd->nPlanes;   /* Haven't counted for mask plane yet*/
+   UBYTE srcPlaneCnt = bmhd->nPlanes;   /* Haven't counted for mask plane yet*/
 
-WORD srcRowBytes = RowBytes (bmhd->w);
+   WORD srcRowBytes = RowBytes (bmhd->w);
 
-WORD destRowBytes = bitmap->BytesPerRow;   /* used as a modulo only */
+   WORD destRowBytes = bitmap->BytesPerRow;   /* used as a modulo only */
 
-LONG bufRowBytes = MaxPackedSize (srcRowBytes);
+   LONG bufRowBytes = MaxPackedSize (srcRowBytes);
 
-WORD nRows = bmhd->h;
+   WORD nRows = bmhd->h;
 
-WORD destWidthBytes;            /* used for width check */
+   WORD destWidthBytes;            /* used for width check */
+ 
+   WORD compression = bmhd->compression;
 
-WORD compression = bmhd->compression;
+   register WORD iPlane, iRow, nEmpty;
 
-register WORD iPlane, iRow, nEmpty;
+   register WORD nFilled;
 
-register WORD nFilled;
+   BYTE *buf, *nullDest, *nullBuf, **pDest;
 
-BYTE *buf, *nullDest, *nullBuf, **pDest;
+   BYTE *planes [MaxSrcPlanes]; /* array of ptrs to planes & mask */
 
-BYTE *planes [MaxSrcPlanes]; /* array of ptrs to planes & mask */
-
-struct ContextNode *cn;
+   struct ContextNode *cn;
 
    cn = CurrentChunk (iff);
 
@@ -1361,13 +1358,13 @@ struct ContextNode *cn;
 
 ULONG getcamg (struct ILBMInfo *ilbm)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
-struct StoredProperty *sp;
+  struct StoredProperty *sp;
 
-UWORD wide,high,deep;
+  UWORD wide,high,deep;
 
-ULONG modeid = NULL;
+  ULONG modeid = NULL;
 
   if (! (iff = ilbm->ParseInfo.iff)) return (NULL);
 
@@ -1429,7 +1426,7 @@ LONG k = 0;
 
 LONG getcontext (struct IFFHandle *iff)
 {
-LONG error;
+  LONG error;
 
   /* Based on our parse initialization, ParseIFF() will return on a stop chunk
    * (error = 0) or end of context for an ILBM FORM (error = IFFERR_EOC) or end of
@@ -1441,11 +1438,11 @@ LONG error;
 
 LONG parseifile (struct ParseInfo *pi,LONG groupid,LONG grouptype,LONG *propchks,LONG *collectchks,LONG *stopchks)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
-register struct ContextNode *cn;
+  register struct ContextNode *cn;
 
-LONG error;
+  LONG error;
 
   if (! (iff = pi->iff)) return (CLIENT_ERROR);
 
@@ -1490,9 +1487,9 @@ LONG error;
 
 LONG contextis (struct IFFHandle *iff,LONG type,LONG id)
 {
-register struct ContextNode *cn;
+  register struct ContextNode *cn;
 
-LONG result = NULL;
+  LONG result = NULL;
 
   if (cn = (CurrentChunk (iff)))
   {
@@ -1507,7 +1504,7 @@ LONG result = NULL;
 
 UBYTE *findpropdata (struct IFFHandle *iff,LONG type,LONG id)
 {
-register struct StoredProperty *sp;
+  register struct StoredProperty *sp;
 
   if (sp = FindProp (iff,type,id)) return (sp->sp_Data);
 
@@ -1516,14 +1513,12 @@ register struct StoredProperty *sp;
 
 LONG setcolors (struct ILBMInfo *ilbm,struct ViewPort *vp)
 {
-LONG ncolors;
+  LONG ncolors;
 
   if (! vp) return (CLIENT_ERROR);
 
   ncolors = MIN (ilbm->ncolors,vp->ColorMap->Count);
 
-  /* printf("setcolors(): ncolors: %d\n", ncolors); */
-  
   if ((! (ilbm->IFFPFlags & IFFPF_NOCOLOR32)) && (ilbm->colorrecord))
 
      Fade (ilbm->win,(ULONG *) ilbm->colorrecord,25L,1L,FROMBLACK);
@@ -1736,9 +1731,9 @@ BOOL UnPackRow (BYTE **pSource, BYTE **pDest, WORD srcBytes0, WORD dstBytes0)
 
 LONG QuerySplashPic (struct ILBMInfo *ilbm,UBYTE *filename)
 {
-LONG error;
+  LONG error;
 
-BitMapHeader *bmhd;
+  BitMapHeader *bmhd;
 
   if (! (ilbm->ParseInfo.iff)) return (CLIENT_ERROR);
 
@@ -1750,8 +1745,8 @@ BitMapHeader *bmhd;
 
      if ((! error) || (error == IFFERR_EOC) || (error == IFFERR_EOF))
      {
-    if (contextis (ilbm->ParseInfo.iff,ID_ILBM,ID_FORM))
-    {
+    	if (contextis (ilbm->ParseInfo.iff,ID_ILBM,ID_FORM))
+    	{
               if (bmhd = (BitMapHeader *) findpropdata (ilbm->ParseInfo.iff,ID_ILBM,ID_BMHD))
               {
                  *(&ilbm->Bmhd) = *bmhd;
@@ -1760,9 +1755,9 @@ BitMapHeader *bmhd;
               }
 
               else error = NOFILE;
-    }
+    	}
 
-    else error = NOFILE;
+    	else error = NOFILE;
      }
 
      closeifile (&(ilbm->ParseInfo));
@@ -1773,9 +1768,9 @@ BitMapHeader *bmhd;
 
 LONG QueryMandPic (struct ILBMInfo *ilbm,struct MandelChunk **ManChk,UBYTE *filename)
 {
-LONG error;
+  LONG error;
 
-BitMapHeader *bmhd;
+  BitMapHeader *bmhd;
 
   if (! (ilbm->ParseInfo.iff)) return (CLIENT_ERROR);
 
@@ -1787,10 +1782,10 @@ BitMapHeader *bmhd;
 
      if ((! error) || (error == IFFERR_EOC) || (error == IFFERR_EOF))
      {
-    if (contextis (ilbm->ParseInfo.iff,ID_ILBM,ID_FORM))
-    {
-       if (*ManChk = (struct MandelChunk *) findpropdata (ilbm->ParseInfo.iff,ID_ILBM,ID_MAND))
-       {
+    	if (contextis (ilbm->ParseInfo.iff,ID_ILBM,ID_FORM))
+    	{
+    		if (*ManChk = (struct MandelChunk *) findpropdata (ilbm->ParseInfo.iff,ID_ILBM,ID_MAND))
+       		{
               if (bmhd = (BitMapHeader *) findpropdata (ilbm->ParseInfo.iff,ID_ILBM,ID_BMHD))
               {
                  *(&ilbm->Bmhd) = *bmhd;
@@ -1799,12 +1794,12 @@ BitMapHeader *bmhd;
               }
 
               else error = NOFILE;
-       }
+       		}
 
-       else error = NOMAND;
-    }
+       		else error = NOMAND;
+    	}
 
-    else error = NOFILE;
+    	else error = NOFILE;
      }
 
      closeifile (&(ilbm->ParseInfo));
@@ -1815,9 +1810,9 @@ BitMapHeader *bmhd;
 
 LONG QueryMandPicNew (struct ILBMInfo *ilbm,struct NewMandelChunk **ManChk,UBYTE *filename)
 {
-LONG error;
+  LONG error;
 
-BitMapHeader *bmhd;
+  BitMapHeader *bmhd;
 
   if (! (ilbm->ParseInfo.iff)) return (CLIENT_ERROR);
 
@@ -1830,10 +1825,10 @@ BitMapHeader *bmhd;
 
      if ((! error) || (error == IFFERR_EOC) || (error == IFFERR_EOF))
      {
-    if (contextis (ilbm->ParseInfo.iff,ID_ILBM,ID_FORM))
-    {
-       if (*ManChk = (struct NewMandelChunk *) findpropdata (ilbm->ParseInfo.iff,ID_ILBM,ID_NEWMAND))
-       {
+    	if (contextis (ilbm->ParseInfo.iff,ID_ILBM,ID_FORM))
+    	{
+       		if (*ManChk = (struct NewMandelChunk *) findpropdata (ilbm->ParseInfo.iff,ID_ILBM,ID_NEWMAND))
+       		{
               /*printf("QueryMandPicNew(): ManChk->FractalType: %d\n", ((struct NewMANDChunk*)(*ManChk)->ch_Data)->FractalType); */
 			  
 			  if (bmhd = (BitMapHeader *) findpropdata (ilbm->ParseInfo.iff,ID_ILBM,ID_BMHD))
@@ -1844,12 +1839,12 @@ BitMapHeader *bmhd;
               }
 
               else error = NOFILE;
-       }
+       		}
 
-       else error = NOMAND;
-    }
+       		else error = NOMAND;
+    	}
 
-    else error = NOFILE;
+    	else error = NOFILE;
      }
 
      closeifile (&(ilbm->ParseInfo));
@@ -1860,9 +1855,9 @@ BitMapHeader *bmhd;
 
 LONG QueryMandPicNewRGB (struct ILBMInfo *ilbm,struct NewRGBMandelChunk **ManChk,UBYTE *filename)
 {
-LONG error;
+  LONG error;
 
-BitMapHeader *bmhd;
+  BitMapHeader *bmhd;
 
   if (! (ilbm->ParseInfo.iff)) return (CLIENT_ERROR);
 
@@ -1927,9 +1922,10 @@ BitMapHeader *bmhd;
 
 LONG LoadMandPic (struct ILBMInfo *ilbm,UBYTE *filename)
 {
-struct BitMap *TmpBM;
+//  struct BitMap *TmpBM;
 
-LONG error;
+  LONG error;
+
   /* since QueryMandPic() has already been done, we already know if it is a 24bit image */
   /* NOT TRUE: nPlanes is again 8 instead of 24 */
   /* It's only available again after openifile() */
@@ -1947,7 +1943,7 @@ LONG error;
   {
      error = parseifile (&(ilbm->ParseInfo),ID_FORM,ID_ILBM,ilbm->ParseInfo.propchks,ilbm->ParseInfo.collectchks,ilbm->ParseInfo.stopchks);
 
-     /*printf("LoadMandPic(): ilbm->Bmhd.nPlanes: %d\n", ilbm->Bmhd.nPlanes);*/
+     /* printf("LoadMandPic(): ilbm->Bmhd.nPlanes: %d\n", ilbm->Bmhd.nPlanes); */
 	 
 	 if ((! error) || (error == IFFERR_EOC) || (error == IFFERR_EOF))
      {
@@ -1957,15 +1953,16 @@ LONG error;
            {
               if (! (error = loadbody (ilbm->ParseInfo.iff,ilbm->wrp->BitMap,&ilbm->Bmhd)));
            }
-
+  
            else
            {
               if (TmpBM = AllocBitMap ((ULONG) ilbm->win->Width,(ULONG) ilbm->win->Height,(ULONG) ilbm->wrp->BitMap->Depth,BMF_INTERLEAVED | BMF_CLEAR | BMF_MINPLANES,NULL))
               {
+				 /* printf("LoadMandPic(): TmpBM: %p\n", TmpBM); */
                  if (! (error = loadbody (ilbm->ParseInfo.iff,TmpBM,&ilbm->Bmhd)))
 
                     BltBitMapRastPort (TmpBM,(LONG) ilbm->win->LeftEdge,(LONG) ilbm->win->TopEdge,ilbm->wrp,(LONG) ilbm->win->LeftEdge,(LONG) ilbm->win->TopEdge,(LONG) ilbm->win->Width,(LONG) ilbm->win->Height,0xC0);
-
+                 
                  FreeBitMap (TmpBM);
               }
            }
@@ -1983,25 +1980,24 @@ LONG error;
 
      closeifile (&(ilbm->ParseInfo));
   }
-
+  
   return (error);
 }
 
 LONG LoadMandPicRGB (struct ILBMInfo *ilbm,UBYTE *filename)
 {
-/* struct BitMap *TmpBM; */
-UBYTE *s, *d;
-WORD x,y;
-ULONG /* xoffset8, yoffset8, */yoffset, xoffset, totoffset;
-LONG b, boffset8;
-UBYTE data;
-UBYTE cred, cgreen, cblue;
-LONG error;
-LONG w,h;
-UBYTE* tempd;
+  UBYTE *d;
+  WORD x,y;
+  ULONG yoffset, totoffset;
+  LONG b, boffset8;
+  UBYTE cred, cgreen, cblue;
+  LONG error;
+  LONG w,h;
+  UBYTE* tempd;
+  struct BitMap *bm;
+  ULONG n;
+  UBYTE bpp;
 
-/* ULONG longdata; */
-  
   if (! (ilbm->ParseInfo.iff)) return (CLIENT_ERROR);
 
   if (! ilbm->scr) return (CLIENT_ERROR);
@@ -2036,66 +2032,54 @@ UBYTE* tempd;
 				SetRast(ilbm->wrp,0); 
 					
 				/* custom blit routine */
-					
-				/*d=ilbm->wrp->BitMap->Planes[0];*/
 				d=GetBitMapPtr(ilbm->wrp->BitMap); 
-                /*Win->RPort->BitMap); */ /* compatible with AROS / ApolloOS */
-                /*d=DD_SCREENBUFFER;*/
+                bpp=GetBitMapBPP(ilbm->wrp->BitMap);
                 
-				/*
-				printf("start blitting: Width: %u Height: %u\n", ilbm->win->Width, ilbm->win->Height);
-				printf("ilbm->wrp->BitMap->Planes[0]: %p\n", d);
-			    printf("ilbm->Bmhd.nPlanes: %u\n", ilbm->Bmhd.nPlanes);
-				*/
-				
+				/* printf("start blitting: Width: %u Height: %u\n", ilbm->win->Width, ilbm->win->Height);
+				printf("destination: %p bpp: %u\n", d, bpp);
+                */
+                
 				w=ilbm->win->Width;
                 h=ilbm->win->Height;
+                
+                bm=ilbm->brbitmap;
+                n=ilbm->Bmhd.nPlanes-1;
                 			
-                for (y=/*ilbm->win->Height*/h-1; y>=0; y--)
+                for (y=h-1; y>=0; y--)
 				{
-					yoffset  = y*w; /*(y*ilbm->win->Width);*/
+					yoffset=y*w;
 						
-					for (x=/*ilbm->win->Width*/w-1 ; x>=0; x--) 
+					for (x=w-1 ; x>=0; x--) 
 					{
-						xoffset  = x;
-						
 						cred=cgreen=cblue=0;
 						
-						for (b=ilbm->Bmhd.nPlanes-1; b>0; b--)
+                        totoffset=yoffset+x; 
+                        
+                        b=n;
+                        while (b)
 						{
-							s=ilbm->brbitmap->Planes[b];			
-							totoffset=yoffset+xoffset;						
-                            /*data=*(s+(yoffset+xoffset)/8);*/
-                            data=*(s+((/*yoffset+xoffset*/totoffset)>>3));
-						
-							/*boffset8 = (yoffset+xoffset) % 8;*/
 							boffset8 = 7 & totoffset;
-						
-							if (data & (1<<(7-boffset8)))
+                            
+							if (*(bm->Planes[b]+((totoffset)>>3)) & (1<<(7-boffset8)))
 							{
 								if (b>15) cblue |= (1<<(b-16));
 								else if (b>7) cgreen |= (1<<(b-8));
 								else cred |= (1<<b);
 							}
-                            /*
-                            *(d+3*(yoffset+xoffset)+0)=cred;
-							*(d+3*(yoffset+xoffset)+1)=cgreen;
-							*(d+3*(yoffset+xoffset)+2)=cblue;
-                            */
                             
+                            tempd=d+bpp*(yoffset+x);
                             
-                            tempd=d+3*(yoffset+xoffset);
-                            /**tempd=cred;
-                            *(tempd+1)=cgreen;
-                            */
-                            *((UWORD*)tempd) = (cred<<8) + cgreen;
-                            /**(tempd+1)=cgreen;*/
-                            *(tempd+2)=cblue;
+                            *(tempd+DD_RED)=cred;
+                        	*(tempd+DD_GREEN)=cgreen;
+                            *(tempd+DD_BLUE)=cblue;
+                        
+                        	b--;
                         }
-					
 						
 					}
-				}
+					if (InterruptDrawing(MYILBM.win, 0, 0, 0, 0)) goto exitblitting;			
+                }
+exitblitting:
 				/* unload brush (frees ilbm->brbitmap) */
 				unloadbrush(ilbm);
 				 
@@ -2116,15 +2100,15 @@ UBYTE* tempd;
 
 LONG SaveMandPicPal (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk *chunklist2,UBYTE *filename)
 {
-struct BitMap *TmpBM;
+  //struct BitMap *TmpBM;
 
-Color32 *colortable32;
+  Color32 *colortable32;
 
-UWORD count;
+  UWORD count;
 
-ULONG modeid;
+  ULONG modeid;
 
-LONG error = IFFERR_NOMEM;
+  LONG error = IFFERR_NOMEM;
 
   modeid = GetVPModeID (ilbm->vp);
 
@@ -2167,13 +2151,13 @@ LONG SaveMandPicRGB (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk
 	LONG error=0L;
 	UWORD pwidth, pheight, extra, depth, pmode;
 	ULONG plsize;
-/*	UBYTE *tpp; */
+    UBYTE bpp;
 	int 	k; /*, p, s, n;*/
-	UBYTE *screenbuffer, *d;
+	UBYTE *screenbuffer; 
 	UWORD x,y;
 	int b;
 	UBYTE red, green, blue,bitmask,bitmaskw;
-	ULONG offset, offset2,ioffset, yoffset;
+	ULONG offset, offset2,ioffset; 
 
 	/* ILBM Property chunks to be grabbed
 	 * List BMHD, CMAP and CAMG first so we can skip them when we write
@@ -2243,7 +2227,7 @@ LONG SaveMandPicRGB (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk
    	/* allocate bitmap and planes */
    	if (MyIlbm->brbitmap = AllocMem(sizeof(struct BitMap) + (extra<<2), MEMF_CLEAR))
 	{
-	    bm = MyIlbm->brbitmap;
+        bm = MyIlbm->brbitmap;
    	    InitBitMap(bm,depth,pwidth,pheight);
    	    for (k=0, error=0; k<depth && (!error); k++)
    	    {
@@ -2255,7 +2239,6 @@ LONG SaveMandPicRGB (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk
 				BltClear(bm->Planes[k], RASSIZE(pwidth,pheight),0);
            	}
 	    }
-    
     
 	    if(!error)
 	    {
@@ -2273,18 +2256,20 @@ LONG SaveMandPicRGB (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk
 	
         if (!error) 			
 		{				
-			screenbuffer=ilbm->win->RPort->BitMap->Planes[0];
-            /*screenbuffer=GetBitMapPtr(ilbm->wrp->BitMap); 
-            /*Win->RPort->BitMap); /* compatible with AROS / ApolloOS */
-			
+            screenbuffer=GetBitMapPtr(ilbm->wrp->BitMap); /* compatible with AROS / ApolloOS */
+            bpp=GetBitMapBPP(ilbm->wrp->BitMap);
+            /*printf("screenbuffer: %p bpp: %u DD: red: %u green: %u blue: %u\n",
+            	screenbuffer, bpp, DD_RED, DD_GREEN, DD_BLUE);
+			*/
+            
             for (y=0; y<pheight; y++)
 			{
                 for (x=0; x<pwidth; x++) 
 				{
-					offset=(y*pwidth+x)*3;
-                    red= *(screenbuffer+offset);
-					green= *(screenbuffer+offset+1);
-					blue= *(screenbuffer+offset+2);
+					offset=(y*pwidth+x)*bpp;
+                    red= *(screenbuffer+offset+DD_RED);
+					green= *(screenbuffer+offset+DD_GREEN);
+					blue= *(screenbuffer+offset+DD_BLUE);
 					
 					for (b=0; b<8; b++)
 					{
@@ -2337,7 +2322,6 @@ LONG SaveMandPicRGB (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk
 					mskNone, 0,	/* masking, transparent */
 	            	chunklist1, chunklist2, /* chunklists */
 	            	filename);
-					
 	    }
     
 		/* Free our bitmap */
@@ -2353,7 +2337,6 @@ LONG SaveMandPicRGB (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk
 		/* check if more memory has to be freed */
 		
 	}
-	
     return (error);
 }
 
@@ -2378,8 +2361,8 @@ LONG SaveMandPic (struct ILBMInfo *ilbm,struct Chunk *chunklist1,struct Chunk *c
 
 LONG LoadPalette (struct ILBMInfo *ilbm,UBYTE *filename, UBYTE* copy)
 {
-LONG error;
-LONG temp;
+  LONG error;
+  LONG temp;
 
   error = openifile (&(ilbm->ParseInfo),filename,IFFF_READ);
 
@@ -2396,8 +2379,6 @@ LONG temp;
 		   if (copy) 
 		   {
 				/* copy color table */
-				/* printf("ncolors: %u\n", ilbm->ncolors); */
-					
 				for (temp=0; temp<=ilbm->ncolors; temp++)
 				{
 					copy[2+temp*3]=ilbm->colortable32 [temp].r & 0xff;
@@ -2417,17 +2398,17 @@ LONG temp;
 
 LONG SavePalette (struct ILBMInfo *ilbm,struct Chunk *chunklist,UBYTE *filename)
 {
-struct IFFHandle *iff;
+  struct IFFHandle *iff;
 
-struct Chunk *chunk;
+  struct Chunk *chunk;
 
-Color32 *colortable32;
+  Color32 *colortable32;
 
-UWORD ncolors;
+  UWORD ncolors;
 
-LONG size,error;
+  LONG size,error;
 
-ULONG chunkID;
+  ULONG chunkID;
 
   iff = ilbm->ParseInfo.iff;
 

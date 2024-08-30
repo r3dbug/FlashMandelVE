@@ -229,6 +229,4 @@
 #define IPTR LONG
 #endif /* IPTR */
 
-
-
 #endif /* !COMPILERSPECIFIC_H */

@@ -2,27 +2,17 @@
 #ifndef COLORWINDOW_H
 #define COLORWINDOW_H
 
-#define FLASHMANDEL_RB
-
 #include <exec/types.h>
 #include <exec/execbase.h>
 #include <intuition/intuition.h>
 #include <intuition/gadgetclass.h>
 #include <proto/exec.h>
 #include <proto/intuition.h>
-/*#include <proto/graphics.h>*/
-#include "/fmprotographics.h"
 #include <proto/gadtools.h>
 #include <proto/utility.h>
 
 #include "/compilerspecific.h"
 #include "fmglobals.h"
-
-/*
-#define MIN(a,b)    ((a)<(b)?(a):(b))
-#define MAX(a,b)    ((a)>(b)?(a):(b))
-*/
-
 
 #define CWACCEPT       (1L)
 #define CWRESET        (2L)

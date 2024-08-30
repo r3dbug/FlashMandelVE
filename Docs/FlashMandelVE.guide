@@ -1,0 +1,375 @@
+@database FlashMandelVE
+@autor "RedBug aka Marcel Maci"
+@(c) "Copyright (c) 2023-2024 Marcel Maci"
+@$VER: FlashMandelVE.guide 24.5 (20240517)
+@font courier.font 13
+@wordwrap
+@toc "main"
+@index "main"
+@help "main"
+
+
+@node main "Welcome to FlashMandel Vamped Edition (FMVE)"
+@next "otherlogo"
+              VVVVVVVV        V V    V V        VVVVVVVV                   
+       VVVVVVVVVVVVV VVVVV    V VVVVVV V    VVVVV VVVVVVVVVVVVV            
+          VVVV       V   VVV  VVVVVVVVVV  VVV  VV       VVV                
+       VVVVVVVVV          VVVVV        VVVVV    V     VVVVVVVVV            
+          VVVVVVV       V V VV V      V VV V V V     VVVVVV                
+               VV        VVV  V V    V V  VVV        VV                    
+               V     V   V VVV V  VVV V VVV V   V    VV                    
+               VV VVVVVV  VV VV V    V VV VV  VVVVVVVV                     
+                VVVV  VVVV    VV VVVV VV    VVVV  VVV                      
+                         VVVV  VV    VV  VVVV                              
+                           V VV VVVVVV VV                                  
+                                VV  VV                                     
+                                 V  V                                      
+                                  VV      
+                                                  
+@{b}TABLE OF CONTENTS@{ub}
+
+@{" Introduction  " link "introduction"} A short introduction to FlashMandel "Vamped Edition"
+@{" Installation  " link "installation"} How to install FMVE on your system
+@{" Compatibility " link "compatibility"} Compatible systems and support on classic Amigas
+@{" Documentation " link "documentation"} Where to find more information about the program and the technical background
+@{" What's new?   " link "newfeatures"} What new fractals and features have been included in FMVE?
+@{" Performance   " link "performance"} Some comparisons to get an idea about the speed of FMVE
+@{" Caveats ...   " link "caveats"} Some things you should keep in mind when using FMVE
+@{" Versions      " link "version"} Version number and release model
+@{" Copyright     " link "copyright"} Legal stuff (and what you can and can't do with FMVE)
+
+(Re-)(Vamped) Amiga(s) rule(z)! (Keep the momentum going ... :)
+
+@endnode
+
+@node introduction "Introduction"
+
+@{b}INTRODUCTION@{ub}
+
+As the name says FlashMandel "Vamped Edition" (FMVE) is a @{b}new version@{ub} (fork) of the classic FlashMandel program specifically written (adapted, extended and optimized) for Vampire cards (both V2 and V4). The original version for classic Amigas was written by Dino Papararo (c) 1996-2001. FlashMandelVE is based on Version 2.0 which can be found on Aminet.
+
+@{" Aminet " system "OpenURL https://aminet.net/gfx/fract/FlashMandel.lha"} https://aminet.net/gfx/fract/FlashMandel.lha
+
+There are other versions of FlashMandel written for other plattforms, for example @{"FlashMandelNG.lha" system "OpenURL https://aminet.net/gfx/fract/FlashMandelNG.lha"}, @{"FlashMandelNG_OS4.lha" system "OpenURL https://aminet.net/gfx/fract/FlashMandelNG_OS4.lha"}, @{"FlashMandelWOS" system "OpenURL https://aminet.net/gfx/fract/FlashMandelWOS.lha"}, @{"FlashMandel_OS4" system "OpenURL https://aminet.net/gfx/fract/FlashMandel_OS4.lha"} (which can all be found on Aminet). FMVE, thus, completes this genealogy of fractal programs descending from the same origin by adding a new m68k exponent to it.
+
+The development of the Vampire specific version started in autumn 2023 and is still going on (as of summer 2024). The source code can be found on Github. Like the original program FMVE is "Giftware" (see @{"Copyright" link "copyright"} for more info). Permission for the development of this version was kindly given by the original author (special thanks to Dino Papararo).
+
+@{" Github " system "OpenURL https://github.com/r3dbug/FlashMandelVE"} https://github.com/r3dbug/FlashMandelVE
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node installation "How to install FMVE"
+
+@{b}INSTALLATION@{ub}
+
+FMVE comes as an @{b}LHA@{ub} file of approximately 30 MB which contains everything (program, pictures, sources, documentation etc.) Just @{b}unpack@{ub} it to your favorite location using your favorite unpacker - that's it!
+
+See @{"Compatibility" link "compatibility"} for supported systems and requirements.
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node compatibility "Compatible systems and support on classic Amigas"
+
+@{b}COMPATIBILITY@{ub}
+
+FMVE works best with a Vampire card (either V2 or V4) and an original AmigaOS system. All versions of @{b}AmigaOS 3.1@{ub} (or @{b}higher@{ub}) should work. FMVE probably works well also on @{b}AmigaOS 3.0@{ub} (but this has not been tested). Please use the @{b}latest core@{ub} (10000+) on your Vampire card to be sure to have access to all features.
+
+Since the Vampire cards are sold with @{b}ApolloOS@{ub} (which, for copyright reasons, is based on @{b}AROS@{ub}) specific efforts have been made to make FMVE compatible with this reimplementation of AmigaOS. Apart from very minor differences (like timings for menu title bar hiding or some adaptions to create bitmaps in order to be fully compatible) everything works now, so that FMVE can be used without restrictions on this system.
+
+Even if FMVE has specifically been written for Vampire cards, the secondary goal was to maintain @{b}backwards@{ub} compatibility with @{b}classic Amigas@{ub} as much as possible. In any case, you will need an @{b}FPU@{ub} (68881,68882 or integrated in 68040/60) and it is recommended to use @{b}RTG@{ub} graphics (even though @{b}OCS/ECS/AGA@{ub} modes might still work to some extent). No specific testing has been made on classic systems, so your mileage may vary. You are, of course, welcome to @{b}report incompatibilities@{ub} to the author, so that they can be fixed (if possible).
+
+Last but not least FMVE should also and mostly run fine on @{b}emulators@{ub} (FS-UAE, WinUAE etc.). As for classic Amigas, this has not been tested much, so please report if you find any incompatibilities.
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node documentation "Where to find more information about the program and the technical background"
+
+@{b}DOCUMENTATION@{ub}
+
+The most important @{b}new@{ub} features included in FMVE are briefly covered in this AmigaGuide document. For all @{b}legacy@{ub} functions (e.g. options via Tooltypes etc.) please consult the @{"original documentation" link "FlashMandel.guide/Main"} (included in the same folder).
+
+For further information about Mandelbrots and specific techniques used to optimize the code (in assembly) on the Vampire there are two Tutorials (PDF with examples and sources) available on Github:
+
+@{" Tutorial " system "OpenURL https://github.com/r3dbug/docs/blob/main/tutorials/Mandelbrot_68080_Part2/Mandelbrot_68080.lha"} https://github.com/r3dbug/docs/blob/main/tutorials/Mandelbrot_68080_Part2/Mandelbrot_68080.lha
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node newfeatures "What new fractals and features have been included in FMVE?"
+
+@{b}NEW FEATURES@{ub}
+
+A lot! Probably too much to cover it in a short guide ... Nonetheless, the following list should give you an overview over the most important things that have been added.
+
+@{b}(1) Fractals@{ub}
+
+New fractals that have been added are: Multibrot, Burningship and Nebulabrots (both Buddhabrot and AntiBuddhabrot). For the Multibrot fractal both integer and floating point values are supported for the power (use positive values >1, the value p=2 corresponds to the classic Mandelbrot). For all fractals the corresponding Julia sets and Nebulabrots can be calculated.
+
+@{b}(2) Algorithms@{ub}
+
+@{b}Classic fractals:@{ub} 
+
+Supported algorithms are: brute force, tiling, boundary trace. In general, tiling and boundary trace are faster than brute force, but they may generate wrong images and cannot calculate smooth colors (so, it is always possible to select the slower brute force algorithm to be sure to obtain an accurate final picture).
+
+@{b}(Anti)Nebulabrots:@{ub} 
+
+Supported algorithms are: random, hitmap, lemniscates/edges. 
+
+- Random (slowest): Random points are used to increment the histogram. 
+- Hitmap (faster): FMVE generates a "hit and miss" map in the background (and then progressively avoids points that didn't hit).
+- Lemniscates (fastest): FMVE first uses the boundary trace algorithm to detect the edges / lemniscates and then only uses (optionally randomized) values from these points.
+
+The algorithms can be combined, e.g. randomized points with a sample map or lemniscates alternating with random points.
+
+@{b}(3) Coloring@{ub}
+
+In combination with the brute force algorithm two additional algorithms have been added to generate smooth colors: Renormalized Iteration Count (RIC) and Cyclic Sinus Coloring (CSC). The latter is the same used by FlashMandelNG and implemented by Dino Papararo. For (Anti)Nebulabrots two coloring algorithms can be used: either iteration intervals or prime number coloring (both defining rgb-channels which - combined - create false color / truecolor images).
+
+@{b}(4) 24bit RTG@{ub}
+
+FMVE now offers full 24bit RTG support (e.g. ARGB, RGB, BGR, BGRA etc.) for all coloring algorithms.
+
+@{b}(5) DEEP ILBM@{ub}
+
+24bit image can be saved as DEEP ILBM (IFF) images. The new picture format also includes a new FMVE data chunk which stores information about the new fractals and the parameters with which they have been calculated. FMVE can still read pictures generated with FlashMandel 2.0 and after loading a picture you can recalculate it (e.g. in a higher resolution) or zoom in.
+
+@{b}(6) Histograms@{ub}
+
+Like Julia sets, Nebulabrots are a different way to calculate Mandelbrot, Multibrot and BurningShip fractals. The final image is based on a histogram (which is needed for the calculation). Since Nebulabrot calculations can take many hours (or even days), these histograms can be saved along with the image and the calculation can be interrupted and resumed later.
+
+@{b}(7) RLE compression@{ub}
+
+Since histograms for Nebulabrots can become very large (e.g. 1920 pixels x 1080 pixels x 4 bytes x 3 colors = 24'883'200 bytes or 25 MB for a FullHD histogram), they can be compressed using a RLE (= runtime length encoding) algorithm.
+
+@{b}(9) Autosave@{ub}
+
+Nebulabrots (and the corresponding histogram) can be automatically saved after a certain time (default: every 20 minutes). The program alternates between the filenames AUTOSAVE.IFF (AUTOSAVE.IFF.HST) - the latest saved picture - and AUTOSAVE1.IFF (AUTOSAVE1.IFF) - a backup of the previously saved picture.
+
+@{b}(10) Sample points@{ub}
+
+Sample points used for Nebulabrot calculations can be visualized. There are four different categories (that can be shown in different colors):
+- EDGE: Points that belong to the edge of the set (= most efficient and productive points)
+- LEMNI: Additional lemniscate points (= potentially efficient and productive points)
+- TRY: Points that the algorithm is free to try (= can but must not be efficient)
+- MISS: Points that the algorithm has tried and failed (= not productive points)
+
+@{b}(11) Parameters@{ub}
+
+A lot of new parameters have been added to offer more possibilities to calculate different variants of the included fractals. To give some examples:
+
+@{b}Iterations:@{ub} 
+For Nebulabrots it is possible to define different minimum and maximum iterations for each color in order to generate "false color" Nebulabrots.
+
+@{b}Bailout:@{ub} 
+Instead of a fixed bailout value (by default: 4), you can define any bailout value (this modifies, for example, the color transitions for smooth coloring).
+
+@{b}NoFill:@{ub} 
+For the boundary trace algorithm, it is possible to disactivate the final filling (which can give some nice pictures showing only the boundaries of the color bands).
+
+@{b}Periodicity:@{ub} for AntiNebulabrots prime numbers can be defined for each color channel (e.g. red=2, green=3, blue=5). Higher orbit numbers create combined colors (e.g. orbit 6: red+green; 15: green+blue; 30: red+green+blue etc.).
+
+@{b}(12) Orbits@{ub}
+
+FMVE offers the possibility to calculate and show the orbits for a specific point in the complex plane (= pixel under the mouse pointer) in the fractals. This function works only in the main view (= unzoomed) of the fractals.
+
+@{b}(13) Optimizations@{ub}
+
+@{b}Vampire:@{ub}
+
+Some (not all) fractals and algorithms have optimized functions for the Vampire and if there is optimized code you can switch forth and back using the menu or Amiga+) and Amiga+(. As mentioned under @{"Documentation" link "documentation"} the technical background is explained two separate Tutorials. The most important Vampire-specific features used are:
+- 3-operant instructions: e.g. fmul fp0,fp1,fp3 to multiply fp0 with fp1 and write the result to fp3
+- extra registers (e0-e23): e.g. fadd fp1,e3 to add the classic register fp1 to the new Vampire scratch register e3
+- parallelized calculation: using different techniques which take advantage of the 68080 architecture (e.g. superscalar design, instruction fusing, new instructions and register) FMVE can calculate up to 4 Mandelbrot points in parallel.
+
+All these optimizations are implemented via function pointers, so that it is easy to compare different algorithms and optimized code vs classic code.
+
+@{b}General:@{ub}
+
+Apart from the Vampire-specific optimizations other general optimizations have been made (which, thus, benefit all platforms):
+- direct screen buffer drawing routines
+- optimized fill routines
+- optimized algorithms
+
+@{b}(14) Timings@{ub}
+
+FMVE uses the Special Purpose Register (SPR) "Clock Cycle Count" (CCC) of the Vampire to get very accurate timings. Depending on the clock multiplyer (default 13x or 92 Mhz as of writing this document) this method can be applied up to a calculation time of about 45 secs. If the calculation takes longer, time mesurement falls back to default (legacy) timers. For Nebulabrots FMVE uses "cumulative" calculation time (i.e. when calculation is resumed, FMVE keeps track of the total calculation time).
+
+@{b}(15) Pictures@{ub}
+
+Some example pictures for new fractals have been included.
+
+@{b}(16) Icon & splash screen@{ub}
+
+FMVE includes a new icon and a new splash screen that shows a ship sailing on a fractal-like ocean and some bats flying around in the sky (to connect it visually to the Vampire). The ship was choosen because of the BurningShip fractal which has newly been added to FMVE.
+
+@{b}(17) Tooltypes@{ub}
+
+FMVE has a new Tooltype named SYSTEM that can have three values:
+
+VALUE           | MEANING
+---------------------------------------------------------------
+SYSTEM=AROS     | FMVE should make specific configuration to 
+                | run better on an m68k AROS system.
+---------------------------------------------------------------
+SYSTEM=APOLLOOS | Same as AROS (ApolloOS is based on AROS)
+---------------------------------------------------------------
+SYSTEM=AMIGAOS  | FMVE is informed that it runs on AmigaOS
+
+Normally, it is not necessary to set this value, because FMVE autodetects the system it is running on. So, use these only if the automatic detection doesn´t work (the tooltype overrides the automatic detection).
+
+
+@{b}(18) Sources@{ub}
+
+The source code has been completely overhauled (e.g. separated into different modules / include files) and a new build script (smakefile for SAS/C and VASM) has been written to speed up the compiling.
+
+@{b}(19) Documentation@{ub}
+
+New @{"Documentation" link "documentation"} has been written to cover both this program and the technical background behind it. 
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node performance "Some examples to get an idea about the speed of FMVE"
+
+@{b}PERFORMANCE@{ub}
+
+Yes, it's time to brag ... FlashMandelVE is fast - very fast! Compared to a "naive brute force" algorithm written in standard (unoptimized) C it can be 10x faster in average! In order to give you an idea, here are some timings for the calculation of the main Mandelbrot (done on a V4SA, core 10000, 13x, 92 Mhz, 1280x720x8bit, Real: -2.0/+2.0, Imag: -1.5/+1.5, 256 iterations):
+
+                        With Symmetry      ||    No Symmetry
+                ---------------------------||------------------------
+                |   Vampire   |  Classic   ||  Vampire   | Classic    
+-------------------------------------------||------------------------
+Unoptimized C   |     -             -      || 20.96 secs | 41.71 secs (1)      
+---------------------------------------------------------------------
+brute force     |  5.20 secs  |  9.50 secs || 10.28 secs | 17.99 secs
+tiling          |  1.38 secs  |  2.84 secs ||  2.65 secs |  5.69 secs 
+boundary trace  |  1.52 secs  |  1.59 secs ||  2.97 secs |  3.04 secs
+
+Unfortunately, I don't have a real 68040 or 68060 to compare, so I have run the same calculation on FS-UAE (Intel Core2Duo, 2.53Mhz, 68040) to give an idea about the speed improvements:
+
+                        With Symmetry      ||    No Symmetry
+                ---------------------------||------------------------
+                |   Vampire   |  Classic   ||  Vampire   | Classic    
+-------------------------------------------||------------------------
+brute force     |      X      |  1:23 mins ||     X      |  2:46 mins
+tiling          |      X      |    19 secs ||     X      |    38 secs 
+boundary trace  |      X      |    14 secs ||     X      |    28 secs
+
+Some comments:
+
+- "Classic": Means that classic FPU or C code (depending on the fractal type) is used for the calculation. On a Vampire, this "classic code" runs (of course and by default) much faster than on a "classic Amiga" (68040/68060 with integrated FPU or 68881/68882 as separate FPU) or an emulator for different reasons (higher clock speed of the Vampire, less clock cycles per instruction on the Vampire, better cache hits, fused instructions, superscalar architecture, native vs emulated execution in the case of an emulator).
+
+- "Vampire": Means that, whenever possible, handwritten ASM code that uses specific features of the Vampire (e.g. e-registers, 3-operant instructions) is used. [This code, of course, doesn't run - and can't even be selected - on a classic machine or UAE, that's why it has been marked with an X in the table.]
+
+- Algorithms: In general, brute force is the slowest algorithm followed by tiling and boundary trace. Normally, boundary trace is slightly faster than tiling, but on the Vampire and with the Mandelbrot, the tiling algorithm can be combined with parallel calculation of 4 points (that's why it is slightly faster in this case; with classic FPU code, it's the boundary trace algorithm which is faster).
+
+- Symmetry: The symmetry optimization is only used on the main view (that's why all calculation have also been done without symmetry) for comparison.
+
+- Unoptimized C (1): You can find the source code an detailed explanation about how this measurement of a "naive brute force algorithm" was done in this @{"Tutorial" system "OpenURL https://github.com/r3dbug/docs/blob/main/tutorials/Mandelbrot_68080_Part2/Mandelbrot_68080.lha"}. [https://github.com/r3dbug/docs/blob/main/tutorials/Mandelbrot_68080_Part2/Mandelbrot_68080.lha]
+
+As you can see, comparing the best (1.38 / 2.65 secs) to the worst (20.96 / 41.71 secs) results, the speed improvement on the Vampire alone is about factor 8-30x (and even more if the program is run on a classic machine or an emulator, where we reach factors from 50-120x). Please note that these values can always slighty vary when running it several times in a row due to internal phenomena in the CPU (e.g. cache hits, branch prediction etc.).
+ 
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node caveats "Things you should keep in mind when using FlashMandel Vamped Edition"
+
+@{b}NOTE@{ub}
+
+Approaching the final release version I have decided to simply forbid the use of menus during a fractal calculation, at least when direct drawing is selected. In addition, when system-friendly draw routines are selected, FMVE by default forbids the use of symmetry (because this function uses, again, direct bitmap copying). All these precautions allow for a more clean solution and therefore, the caveat below is only valid if you manually disactivate them under ´Options´ => ´Drawing´.
+
+@{b}CAVEAT@{ub}
+
+Basically, there is only one rule you have to respect during the calculations: 
+
+@{b}HANDS OFF!@{ub}
+
+Seriously ... don't touch the mouse during a calculation (or you might mess up the result)! For performance reasons, FMVE uses direct screen buffer access by default, so it does not know (and care) if other instances (e.g. intuition, for a menu it wants to show) want to draw something on the screen at the same time. If you really feel like you must use the menus during calculations, please use the "system friendly" drawing option (which is much slower).
+
+The recommended way to use menus is to interrupt the calculation using ESC and then click the right mouse button.
+
+You have been warned ... ! :)
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node version "Version numbering and release model"
+
+@{b}VERSIONS@{ub}
+
+For simplicity FlashMandelVE will use a "rolling release model" and all version will be labelled "YY.MM R(DD)" where YY=Year (last two digits), MM=month, R=Release, DD=day (1-2 digits). Odd day numbers mean "Beta" (even = "Stable"). From time to time, new versions may be uploaded to the Github account and/or Aminet.
+
+The corresponding documentation will be labelled YY.MM (just year plus month).
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+
+@node copyright "Copyright"
+
+@{b}COPYRIGHT@{ub}
+
+@{b}Original version@{ub}
+
+As the original author, Dino Papararo, stated:
+
+FlashMandel is GiftWare, send anything to the author, if you like it. So, here's how to contact him: Dino Papararo, Via Manzoni 184, 80123 Napoli (Italy), dino.papararo at gmail dot com.
+
+The complete copyright note of the original program can be found @{"here" link "FlashMandel.guide/CopyRg"}.
+
+@{b}Vamped Edition@{ub}
+
+Respecting the original copyright, the same rules apply for FMVE. So, if you want to send me a post card (or anything;) I am really not against it: Marcel Maci, Rte des Augustins 9, 1700 Fribourg (Switzerland), m.maci at gmx dot ch.
+
+Just for clarity, and in addition to the original copyright, I add to this that all parts (code) written by me and added to FMVE (= not present in the original FlashMandel) are FREE SOFTWARE in the sense of the GNU GPL license:
+
+@{i}"This program (code added in FMVE as mentioned above) is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License or (at your option) any other later version."@{ui}
+
+Please note that FlashMandelVE has accumulated, over the years, source code from different sources (subject to different copyrights) and authors, so - just to avoid any misunderstanding - we recommend to contact us beforehand via the indicated addresses above in case you want to develop your own version.
+
+If you like this program (and instead of sending me anything, by the way), please (rather) consider buying a Vampire (it´s a great little card ... ;-).
+
+@{" Back to TOC " link "main"}
+
+@endnode
+
+@node otherlogo
+
+      .VVVVVVVVV       V.       .V       VVVVVVVVV.    
+     VVVVVVVVVV       .VVVVVVVVVVV.       VVVVVVVVVV
+      .VVV.       .  .VVVVVVVVVVVVV.  .       .VVV.      
+        .VVVV  VVVVV   VVVVVVVVVVV   VVVVV  VVVV.        
+        VVVVVV.  VVVV.   VVVVVVV  .VVVV  .VVVVVV       
+      .V.  .VVVVV  VVVVV  VVVVV .VVVVV  VVVV.  .V.      
+              .VVV  VVVVV  VVV  VVVVV  VVV.              
+                VVV.  VVVV  .  VVVV  .VVV                
+                .VVV.  VVVVV VVVVV  .VVV.                 
+                V        VVVVVVV        V                 
+                          .VVV.                          
+                           . .                         
+                            V                                                                                                           
+   
+@{b}TABLE OF CONTENTS@{ub}
+
+@{" Introduction  " link "introduction"} A short introduction to FlashMandel "Vamped Edition"
+@{" Installation  " link "installation"} How to install FMVE on your system
+@{" Compatibility " link "compatibility"} Compatible systems and support on classic Amigas
+@{" Documentation " link "documentation"} Where to find more information about the program and the technical background
+@{" What's new?   " link "newfeatures"} What new fractals and features have been included in FMVE?
+@{" Versions      " link "version"} Version number and release model
+@{" Copyright     " link "copyright"} Legal stuff (and what you can and can't do with FMVE)
+
+(Re-)(Vamped) Amiga(s) rule(z)! (Keep the momentum going ... :)
+
+@endnode

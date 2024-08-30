@@ -1,4 +1,6 @@
 
+/* includes cgfx and other graphics stuff */
+
 #include "fmcgx.h"
 
 extern ULONG detected_system;
@@ -44,80 +46,61 @@ void* GetBitMapPtr(struct BitMap* bm)
 	return screenbuffer;
 }
 
+/*
+void DebugBitmapFlags(ULONG f)
+{
+	if (f & BMF_CLEAR) printf(" BMF_CLEAR");
+    if (f & BMF_DISPLAYABLE) printf(" BMF_DISPLAYABLE");
+    if (f & BMF_INTERLEAVED) printf(" BMF_INTERLEAVED");
+    if (f & BMF_STANDARD) printf(" BMF_STANDARD");
+    if (f & BMF_MINPLANES) printf(" BMF_MINPLANES");
+}
+
+void DebugBitmap(struct BitMap *bm)
+{
+	int i;
+	printf("----------------------------\nDebug bitmap:\nPointer: bm = %p\n", bm);
+    
+    if (bm)
+    {
+    	printf("BytesPerRow: %u\n", bm->BytesPerRow);
+        printf("Rows:        %u\n", bm->Rows);
+        printf("Flags:       %x (", bm->Flags);
+        DebugBitmapFlags(bm->Flags);
+        printf(" )\n");
+        printf("Depth:       %u\n", bm->Depth);
+        printf("pad:         %u (%x)\n", bm->pad, bm->pad);
+        for (i=0; i<9; i++)
+        {
+        printf("Planes[%u]:   %p\n", i, bm->Planes[i]);
+        }
+    } 
+	printf("----------------------------\n", bm);
+   
+}
+*/
+
 BOOL IsAClassicScreen(LONG ModeID)
 {
-	switch (ModeID)
-    {
-    	case 0x29000 : /* PAL HIRES */
-        case 0x21000 : /* PAL LORES */
-        case 0x19000 : /* NTSC HIRES */
-        case 0x11000 : /* NTSC LORES */
-                drawing=DRAW_CLASSIC; 
-                return TRUE;
-                break;
-        default :
-        		drawing=DRAW_DIRECT;
-                return FALSE;
-    }
+	return (!IsCyberModeID(ModeID));
 }
 
 void FreeBitMapSafety (struct BitMap *Bitmap)
 {
     WaitBlit ();
-
-	
+        
     if (Bitmap) 
 	{
-		
 		/*printf("BytesPerRow: %u Rows: %u Depth: %u pad: %p plane[0]: %p\n",
 		      Bitmap->BytesPerRow, Bitmap->Rows, Bitmap->Depth, Bitmap->pad, Bitmap->Planes[0]);
 		*/
-		/*
-		printf("FreeBitMap disabled/reenabled for test purposes\n");	  
-		*/
-		
-		/* FreeBitMap() causes "memory freed twice error on AROS / ApolloOS */
-		/* Avoid it by not freeing memory (this is ugly ... some memory will be lost
-		 * each time a picture is opened, for example ... 
-		 */
-		
-		if (detected_system==RUNNING_ON_AROS) 
-		{
-			/* only free bitmap if pad field == 0x6148 == HIDD bitmap */
-			if (Bitmap->pad==0x6148) FreeBitMap (Bitmap);
-			else FreeILBMBitMapOnAROS(Bitmap); /* try to free an ILBM / classic bitmap on AROS with custom code (AROS doesn't support that) */
-		} else FreeBitMap(Bitmap);
+            FreeBitMap(Bitmap); 
 	}
-}
-
-void FreeILBMBitMapOnAROS(struct BitMap *bm)
-{
-	printf("Classic bitmap at %p cannot (yet) be freed on AROS / ApolloOS (memory is lost).\n", bm);
-/*	
-	WORD i;
-	printf("Trying to free ILBM bitmap with custom code:\n");
-	printf("BytesPerRow: %u Rows: %u Depth: %u pad: %p plane[0]: %p\n",
-		      bm->BytesPerRow, bm->Rows, bm->Depth, bm->pad, bm->Planes[0]);
-	
-	printf("Delta-P: %u\n", bm->Planes[1]-bm->Planes[0]);
-	
-	for (i=0; i<bm->Depth; i++)
-	{
-		if (bm->Planes[i]) printf("Planes[%u]: %p => must be freed ... ", i, bm->Planes[i]);
-		
-		//FreeVec(bm->Planes[i]);
-		
-		FreeMem(bm->Planes[i], bm->BytesPerRow * bm->Rows);
-		bm->Planes[0] = NULL;
-		printf("=> freed %u bytes and set to NULL\n", bm->BytesPerRow * bm->Rows);
-		
-	}
-*/
 }
 
 struct BitMap *CopyBitMap (struct Window *Win,WORD Left,WORD Top,WORD Width,WORD Height)
 {
-struct BitMap *NewBM;
+  struct BitMap *NewBM;
 
   NewBM = AllocBitMap ((ULONG) Width,(ULONG) Height,(ULONG) Win->RPort->BitMap->Depth,BMF_INTERLEAVED | BMF_CLEAR | BMF_MINPLANES,Win->RPort->BitMap);
 
@@ -141,34 +124,21 @@ struct BitMap *NewBM;
 
 LONG MakeDisplay (struct ILBMInfo *Ilbm)
 {
-ULONG checkw, checkh, checkd, checkid;
+  static ULONG SAVED_COMPONENT = NULL,SAVED_POSITION = NULL;
 
-static ULONG SAVED_COMPONENT = NULL,SAVED_POSITION = NULL;
-
-  /*printf("BEFORE: Ilbm->camg: %p Ilbm->usermodeid: %p\n", Ilbm->camg, Ilbm->usermodeid);*/
-  
   if (Ilbm->IFFPFlags & IFFPF_USERMODE) Ilbm->camg = Ilbm->usermodeid;
 
-  /*printf("AFTER: Ilbm->camg: %p Ilbm->usermodeid: %p\n", Ilbm->camg, Ilbm->usermodeid);*/
-  
- 
   Ilbm->Bmhd.w = MAX (MIN_WIDTH,Ilbm->Bmhd.w);
 
   Ilbm->Bmhd.h = MAX (MIN_HEIGHT,Ilbm->Bmhd.h);
 
   if (ModeNotAvailable (Ilbm->camg) || (Ilbm->IFFPFlags & IFFPF_BESTFIT))
      Ilbm->camg = ModeFallBack (Ilbm->camg,Ilbm->Bmhd.w,Ilbm->Bmhd.h,Ilbm->Bmhd.nPlanes);
-/*
- printf("ModeFallBack(): width: %u height: %u planes: %u\n", Ilbm->Bmhd.w, Ilbm->Bmhd.h, Ilbm->Bmhd.nPlanes);
-*/ 
+
   Ilbm->Bmhd.nPlanes = MAX (MIN_DEPTH,Ilbm->Bmhd.nPlanes);
 
   if (Ilbm->Bmhd.nPlanes > GetMaxPlanes (Ilbm->camg)) Ilbm->Bmhd.nPlanes = GetMaxPlanes (Ilbm->camg);
 
-  /*printf("MYFONTSTRUCT: .ta_Name: %s .ta_YSize: %u .ta_Style: %u .ta_Flags: %p\n", 
-	 	MYFONTSTRUCT.ta_Name, MYFONTSTRUCT.ta_YSize, MYFONTSTRUCT.ta_Style, MYFONTSTRUCT.ta_Flags);
-   */
-  	
   if (NEWFONT = OpenDiskFont (&MYFONTSTRUCT)) MASK |= FMASK;
 
   else
@@ -201,22 +171,17 @@ static ULONG SAVED_COMPONENT = NULL,SAVED_POSITION = NULL;
 
   *(PALETTE + SAVED_POSITION) = NULL;
 
-  checkw = MAX (Ilbm->Bmhd.pageWidth,Ilbm->Bmhd.w);
-  checkh = MAX (Ilbm->Bmhd.pageHeight,Ilbm->Bmhd.h);
-  checkd = Ilbm->Bmhd.nPlanes;
-  checkid = Ilbm->camg;
-/*  printf("OpenDisplay(): w: %d h: %d d: %d camg: %p\n", checkw, checkh, checkd, checkid);
-*/  
-  
   if (! (OpenDisplay (Ilbm,MAX (Ilbm->Bmhd.pageWidth,Ilbm->Bmhd.w),MAX (Ilbm->Bmhd.pageHeight,Ilbm->Bmhd.h),Ilbm->Bmhd.nPlanes,Ilbm->camg))) 
   {
   	printf("Could not open display (sorry ... ;-) ...\n");
 	
-  	/*return NULL;*/
+  	return NULL; 
   }
+
+  PutPointer (Ilbm->win,0,0,0,0,0,FM_BUSY_MOUSE_POINTER);
   
   Ilbm->Bmhd.nPlanes = GetBitMapAttr(Ilbm->wrp->BitMap,BMA_DEPTH);
-  
+
   MASK |= SMASK;
 
   MASK |= WMASK;
@@ -257,11 +222,11 @@ static ULONG SAVED_COMPONENT = NULL,SAVED_POSITION = NULL;
 
 UBYTE GetMaxPlanes (ULONG ModeID)
 {
-DisplayInfoHandle DisplayHandle;
+  DisplayInfoHandle DisplayHandle;
 
-struct DimensionInfo DimensionInfo;
+  struct DimensionInfo DimensionInfo;
 
-UBYTE Planes = 0;
+  UBYTE Planes = 0;
 
   DisplayHandle = FindDisplayInfo (ModeID);
 
@@ -277,19 +242,14 @@ UBYTE Planes = 0;
 
 VOID CloseDisplay (struct ILBMInfo *Ilbm,CPTR *VInfo)
 {
-  /* "memory freed twice" error under ApolloOS: 
-   * added if (x) ... at the beginning of all freeing 
-   * => didn't help - problem is in FreeBitMap()
-   * => all if () commented out again
-   */
-	
+
   if (WMASK & MASK)
   {
      ClearMenuStrip (Ilbm->win);
 
      PutPointer (Ilbm->win,0,0,0,0,0,CLEAR_POINTER);
 
-     /*if (Ilbm->win)*/ CloseWindow (Ilbm->win);
+     CloseWindow (Ilbm->win);
 
      Ilbm->win = NULL;
 
@@ -300,31 +260,33 @@ VOID CloseDisplay (struct ILBMInfo *Ilbm,CPTR *VInfo)
  
   if (VMASK & MASK)
   {
-     /*if (VInfo)*/ FreeVisualInfo (VInfo);
+     FreeVisualInfo (VInfo);
 
      MASK ^= VMASK;
   }
  
   if (MMASK & MASK)
   {
-     /*if (TempBM)*/ FreeBitMapSafety (TempBM);
-
+     FreeBitMapSafety (TempBM);
+     TempBM=NULL;
+     
      MASK ^= MMASK;
   }
  
   if (LMASK & MASK)
   {
-     /*if (PixelLine)*/ FreeVec (PixelLine);
+     FreeVec (PixelLine);
 
      MASK ^= LMASK;
   }
  
   if (SMASK & MASK)
   {
-     /*if (Ilbm->scr)*/ CloseScreen (Ilbm->scr);
-
-     /*if (Ilbm->brbitmap)*/ FreeBitMapSafety (Ilbm->brbitmap);
-
+     CloseScreen (Ilbm->scr);
+     
+     FreeBitMapSafety (Ilbm->brbitmap);
+	 Ilbm->brbitmap=NULL;
+     
      Ilbm->scr = NULL;
 
      Ilbm->vp  = NULL;
@@ -336,7 +298,7 @@ VOID CloseDisplay (struct ILBMInfo *Ilbm,CPTR *VInfo)
  
   if (FMASK & MASK)
   {
-     /*if (NEWFONT)*/ CloseFont (NEWFONT);
+     CloseFont (NEWFONT);
 
      MASK ^= FMASK;
   }  
@@ -344,9 +306,10 @@ VOID CloseDisplay (struct ILBMInfo *Ilbm,CPTR *VInfo)
 
 BOOL AllocTempRast (UWORD Width,UBYTE Planes)
 {
-BOOL Success = FALSE;
+  BOOL Success = FALSE;
 
-  if (TempBM = AllocBitMap ((((Width + 15) >> 4) << 1), 1, Planes, BMF_INTERLEAVED | BMF_CLEAR | BMF_MINPLANES, NULL))
+  /* use different flags / bitmap types for AmigaOS (BMF_INTERLEAVED) and AROS / ApolloOS (non-interleaved) */
+  if (TempBM = AllocBitMap ((((Width + 15) >> 4) << 1), 1, Planes, FM_ALLOCTEMPRAST_FLAGS /*BMF_INTERLEAVED |*//* BMF_CLEAR | BMF_MINPLANES*/, NULL))
   {
      InitRastPort (&TempRP);
 
@@ -358,15 +321,15 @@ BOOL Success = FALSE;
 
      else FreeBitMapSafety (TempBM);
   }
-
+  /* DebugBitmap(TempBM); */
   return Success;
 }
 
 struct Window *OpenDisplay (struct ILBMInfo *Ilbm,WORD Width,WORD Height,WORD Depth,ULONG ModeID)
 {
-struct Screen *Scr;
+  struct Screen *Scr;
 
-struct Window *Win = NULL;
+  struct Window *Win = NULL;
 
   if (Scr = OpenIdScreen (Ilbm,Width,Height,Depth,ModeID))
   {
@@ -412,11 +375,11 @@ struct Window *Win = NULL;
 
 VOID ClipIt (WORD wide,WORD high,struct Rectangle *spos,struct Rectangle *dclip,struct Rectangle *txto, struct Rectangle *stdo,struct Rectangle *maxo, struct Rectangle *uclip,BOOL NoCenter)
 {
-struct Rectangle *besto;
+    struct Rectangle *besto;
 
-WORD minx, maxx, miny, maxy;
+    WORD minx, maxx, miny, maxy;
 
-WORD txtw, txth, stdw, stdh, bestw, besth;
+    WORD txtw, txth, stdw, stdh, bestw, besth;
 
     /* get the txt, std and max widths and heights */
 
@@ -458,9 +421,10 @@ WORD txtw, txth, stdw, stdh, bestw, besth;
     else
     {
         /* CENTER the screen based on best oscan prefs
-        * but confine dclip within max oscan limits
-        *
-        * FIX MinX first */
+         * but confine dclip within max oscan limits
+         *
+         * FIX MinX first 
+         */
 
         spos->MinX = minx = besto->MinX - ((wide - bestw) >> 1);
 
@@ -512,9 +476,9 @@ WORD txtw, txth, stdw, stdh, bestw, besth;
 
 ULONG ModeFallBack (ULONG OldModeID,WORD Width,WORD Height,WORD Depth)
 {
-struct Screen *PubScreen;
+  struct Screen *PubScreen;
 
-ULONG NewModeID = HIRESLACE_KEY,ModeID;
+  ULONG NewModeID = HIRESLACE_KEY,ModeID;
 
   if (PubScreen = LockPubScreen (NULL))
   {
@@ -537,15 +501,17 @@ ULONG NewModeID = HIRESLACE_KEY,ModeID;
 
 struct Screen *OpenIdScreen (struct ILBMInfo *Ilbm,WORD Width,WORD Height,WORD Depth,ULONG ModeID)
 {
-struct Rectangle Spos,DClip,TxtO,StdO,MaxO,UClip;
+  struct Rectangle Spos,DClip,TxtO,StdO,MaxO,UClip;
 
-struct Rectangle *UClipp;
+  struct Rectangle *UClipp;
 
-struct Screen *Scr;
-UBYTE temp;
-LONG ErrorCode = NULL,TryNew;
+  struct Screen *Scr;
 
-ULONG BitMapTag,PassedTags;
+  UBYTE temp;
+  
+  LONG ErrorCode = NULL,TryNew;
+
+  ULONG BitMapTag,PassedTags;
 
   if (! Ilbm) return (NULL);
 
@@ -564,10 +530,12 @@ ULONG BitMapTag,PassedTags;
      BitMapTag = ((Ilbm->brbitmap) && (Ilbm->stype & CUSTOMBITMAP)) ? SA_BitMap : TAG_IGNORE;
 
      PassedTags = Ilbm->stags ? TAG_MORE : TAG_IGNORE;
+
 /*
 	 printf("OpenScreenTags(): ModeID: %p, SA_Type: %d, SA_Top: %d, SA_Left: %d, SA_Width: %d, SA_Height: %d, SA_Depth: %d\n",
 	      ModeID, Ilbm->stype, Spos.MinY, Spos.MinX, Width, Height, Depth);
 */	
+
      Scr = OpenScreenTags (NULL,
                            SA_DisplayID,   ModeID,
                            SA_Type,        Ilbm->stype,
@@ -584,7 +552,7 @@ ULONG BitMapTag,PassedTags;
                            /*
 						   SA_Interleaved, TRUE,
                            */
-						   SA_Font,        &MYFONTSTRUCT,
+						   /*SA_Font,        &MYFONTSTRUCT,*/ /* disabled because it may cause memory issues ?! */
                            SA_Title,       title_string,
                            /*SA_ErrorCode,   &ErrorCode,
                            */
@@ -594,15 +562,15 @@ ULONG BitMapTag,PassedTags;
                            */
 						   TAG_END);
 
-	 /*if ((ModeID == 0x29000) || 
-     	((ModeID & PAL_MONITOR_ID) == PAL_MONITOR_ID) || 
-        ((ModeID & NTSC_MONITOR_ID) == NTSC_MONITOR_ID)) drawing=DRAW_CLASSIC;
-     */
      temp=drawing;
-     if (IsAClassicScreen(ModeID)) drawing=DRAW_CLASSIC;
-     else drawing=DRAW_DIRECT; /* use AmigaOS functions for non-SAGA screens */ 
      
-     /*SetMenuSelection();*/
+     /* this part has not been tested */
+     if (IsAClassicScreen(ModeID)) 
+     {
+        drawing=DRAW_CLASSIC;
+     	SAFP();
+     }
+     
      if (temp!=drawing) SetDrawingMenu();
      
      if (! Scr)
@@ -661,13 +629,13 @@ ULONG BitMapTag,PassedTags;
 
 LONG CheckGFX (VOID)
 {
-DisplayInfoHandle DisplayHandle;
+  DisplayInfoHandle DisplayHandle;
 
-struct DisplayInfo DisplayInfo;
+  struct DisplayInfo DisplayInfo;
 
-BOOL AGA = FALSE,RTG = FALSE;
+  BOOL AGA = FALSE,RTG = FALSE;
 
-ULONG ModeID = (ULONG) INVALID_ID;
+  ULONG ModeID = (ULONG) INVALID_ID;
 
   if (GetMaxPlanes (LORES_KEY) == MAX_DEPTH) AGA = TRUE;
 

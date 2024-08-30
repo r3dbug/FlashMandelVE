@@ -18,14 +18,12 @@ IMPORT void ASMCALL sincosFPU (REG (fp0,double), REG(fp1,double));
 IMPORT double ASMCALL atan2FPU (REG (fp0,double),REG (fp1,double)); 
 IMPORT double ASMCALL atan2andpowFPU (REG (fp0,double),REG (fp1,double), REG(fp2,double), REG(fp3,double)); 
 IMPORT double ASMCALL arctanFPU (REG (fp0,double)); 
-IMPORT UWORD ASMCALL BuddhaIterationsVampire(REG(d0,UWORD),REG(fp0,double),REG(fp1,double),REG(a0,double*),REG(a1,double*));
 
 extern VOID (*V_LINE) (struct RastPort *,const LONG,const LONG,const LONG);
 
 extern VOID (*H_LINE) (struct RastPort *,const LONG,const LONG,const LONG);
 
 /* Common global variables (from boundary) */
-/*UWORD* Data; */
 extern UBYTE *Data;
 extern UBYTE *Done;
 extern ULONG *Queue;
@@ -40,8 +38,9 @@ extern ULONG resx, resy;
 extern UBYTE* screenbuffer;
 
 extern ULONG CURRENT_MAX_COLORS;
-extern UWORD ITERATIONS;
+/*extern UWORD ITERATIONS;
 extern WORD MAX_ITERATIONS,  BUDDHA_MIN_ITERATIONS, RETURNVALUE;
+*/
 extern double RMIN,RMAX,IMIN,IMAX;
 
 extern double DEF_RMIN,DEF_RMAX,DEF_IMIN,DEF_IMAX,DEF_JKRE,DEF_JKIM,URMIN,URMAX,UIMIN,UIMAX,UJKRE,UJKIM;
@@ -53,8 +52,7 @@ extern ULONG MultiPower;
 extern double MultiPowerFloat;
 
 
-/*extern double FACTOR,INCREMREAL,INCREMIMAG,CRE,CIM,JKRE,JKIM;
-*/
+/*extern double FACTOR,INCREMREAL,INCREMIMAG,CRE,CIM,JKRE,JKIM; */
 extern ULONG MultiPower;
 extern double MultiPowerFloat;
 
@@ -66,11 +64,6 @@ extern UWORD FractalType;
 extern double GlobalPowerVar;
 
 /* variables for optimized routines */
-/*extern UWORD IterP1;
-extern UWORD IterP2;
-extern UWORD IterP3;
-extern UWORD IterP4;
-*/
 extern double FinalXP1, FinalXP2, FinalXP3, FinalXP4;
 extern double FinalYP1, FinalYP2, FinalYP3, FinalYP4;
 extern double GlobalP;
@@ -101,15 +94,20 @@ extern ULONG FM_REDMIN, FM_GREENMIN, FM_BLUEMIN;
 
 extern UBYTE SHOW_MAXCOUNTERS;
 
+extern ULONG (*FractalIterationGeneric)(ULONG,double,double);
+
 #include "drawing.h"
 #include "math_functions.h"
 
 /***********************************************/
 /* Functions / Algorithms for smooth coloring  */
 /***********************************************/
-
+BOOL AllocIterArray(void);
+void FreeIterArray(void);
 BOOL AllocBuddha(void);
 void FreeBuddha(void);
+void InitBuddha(void);
+void FreeHitmap(void);
 
 LONG lround(double);
 double RenormalizedIterationCount(ULONG, double, double, double);
@@ -139,6 +137,11 @@ ULONG MultiJuliaInC(ULONG, double, double);
 ULONG MultiJuliaFloatingPowerInC(ULONG, double, double);
 ULONG MultiMandelFloatingPowerInC(ULONG, double, double);
 ULONG MultiMandelFloatingPowerInCStoreIterations(ULONG, double, double);
+
+/************ generic boundary ***********/
+UWORD LoadFractalGeneric(ULONG); 
+void ScanFractalGeneric(ULONG); 
+ULONG DrawFractalBoundaryGeneric (struct Window *,const LONG,const LONG,const LONG,const LONG);
 
 /**********************************************************************************************/
 /********************************** BRUTE FORCE ***********************************************/
@@ -224,28 +227,15 @@ void ClearBoundaryBuffers(void);
 /* (3b) Julia */
 /* (3c) MultiMandel */
 
-UWORD LoadMultiMandel(ULONG); 
-void ScanMultiMandel(ULONG); 
-ULONG DrawMultiMandelFractalBoundary (struct Window *,const LONG,const LONG,const LONG,const LONG);
-
 /* (3d) MultiJulia */
 
-UWORD LoadMultiJulia(ULONG); 
-void ScanMultiJulia(ULONG); 
-ULONG DrawMultiJuliaFractalBoundary (struct Window *,const LONG,const LONG,const LONG,const LONG);
-
 /* 1d) Burning ship boundary */
-
-UWORD LoadBurningShip(ULONG); 
-ULONG DrawBurningShipFractalBoundary (struct Window *,const LONG,const LONG,const LONG,const LONG);
 
 /* different algorithms (= no brute, tiling, boundary) */
 
 ULONG DrawBuddhaFractalRandomNumbers (struct Window *,const LONG,const LONG,const LONG,const LONG);
 void StoreIterations(UBYTE, ULONG, ULONG, double, double, ULONG, ULONG);
 void printhistogramstats(void);
-UWORD LoadMandel4Buddha(ULONG); 
-ULONG DrawMandelFractalBoundary4Buddha (struct Window *,const LONG,const LONG,const LONG,const LONG);
 ULONG DrawTrueColorBuddhaFractalRandomNumbers (struct Window *,const LONG,const LONG,const LONG,const LONG);
 
 #endif /* SHARED_H */

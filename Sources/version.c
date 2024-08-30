@@ -60,3 +60,28 @@ BOOL IsBeta(UWORD version)
 	if (GetDay(version)==0) return TRUE;
 	else return FALSE;
 }
+
+BOOL ANewerThanB(UWORD A, UWORD B)
+{
+	if ( 
+    	(GetYear(A)>=GetYear(B))
+        &&
+        (GetMonth(B)>=GetMonth(B))
+        && 
+        (GetDay(A)>=GetDay(B))
+       )
+       		return TRUE;
+    else
+    		return FALSE;
+}
+
+BOOL ActualNewerThanB(UWORD version)
+{
+ 	return ANewerThanB(	
+        		PackVersionWord(
+        			VERSION_YEAR,
+        			VERSION_MONTH,
+        			VERSION_DAY),
+            	version
+        		);
+}

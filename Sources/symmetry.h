@@ -5,7 +5,7 @@
 extern ULONG (*OriginalDrawFractal) (struct Window *,const LONG,const LONG,const LONG,const LONG);
 
 void DisableSymmetry(void);
-ULONG DrawFractalUsingSymmetry(struct Window *, const LONG,const LONG,const LONG,const LONG);
+double DrawFractalUsingSymmetry(struct Window *, const LONG,const LONG,const LONG,const LONG);
 void EnableSymmetry(void);
 
 #endif /* SYMMETRY_H */

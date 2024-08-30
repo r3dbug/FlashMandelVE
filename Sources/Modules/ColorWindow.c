@@ -12,25 +12,25 @@ struct NewGadget BUTTON_GAD,SLIDER_GAD,PALETTE_GAD;
 
 BOOL ModifyPalette (struct Window *Win,WORD LeftEdge,WORD TopEdge,ULONG *Palette32)
 {
-struct Window *ColorWin;
+  struct Window *ColorWin;
 
-struct IntuiMessage *Message;
+  struct IntuiMessage *Message;
 
-struct Gadget *GadList = NULL,*MyButtonGad,*MyPaletteGad;
+  struct Gadget *GadList = NULL,*MyButtonGad,*MyPaletteGad;
 
-struct Gadget *RedSliderGad,*GreenSliderGad,*BlueSliderGad,*MyGad;
+  struct Gadget *RedSliderGad,*GreenSliderGad,*BlueSliderGad,*MyGad;
 
-BOOL Copy_Msg = FALSE,Swap_Msg = FALSE,Spread_Msg = FALSE,Exit = FALSE;
+  BOOL Copy_Msg = FALSE,Swap_Msg = FALSE,Spread_Msg = FALSE,Exit = FALSE;
 
-ULONG SelectedPen = STARTPEN,OldPen = NULL,NewPen;
+  ULONG SelectedPen = STARTPEN,OldPen = NULL,NewPen;
 
-UWORD MyCode;
+  UWORD MyCode;
 
-ULONG MyClass,Colors,ColorBase = 3L * STARTPEN + 1L;
+  ULONG MyClass,Colors,ColorBase = 3L * STARTPEN + 1L;
 
-ULONG RedLevel,GreenLevel,BlueLevel;
+  ULONG RedLevel,GreenLevel,BlueLevel;
 
-CPTR *VInfo;
+  CPTR *VInfo;
 
   Colors = 1L << Win->RPort->BitMap->Depth;
 
@@ -772,9 +772,9 @@ VOID Copy (struct Window *Win,ULONG PenNumber)
 
 VOID Paste (struct Window *Win,const ULONG PenNumber)
 {
-const ULONG ColorBase = 3L * PenNumber + 1L;
+  const ULONG ColorBase = 3L * PenNumber + 1L;
 
-ULONG Index;
+  ULONG Index;
 
   for (Index = 0L; Index < 3L; Index++) COLOR_RGB [ColorBase + Index] = COPY_RGB [Index];
 
@@ -783,9 +783,9 @@ ULONG Index;
 
 void Swap (struct Window *Win,const ULONG Pen_1,const ULONG Pen_2)
 {
-ULONG Tmp_RGB [3L];
+   ULONG Tmp_RGB [3L];
 
-ULONG Index;
+   ULONG Index;
 
    GetRGB32 (ViewPortAddress (Win)->ColorMap,Pen_1,1L,Tmp_RGB);
 
@@ -800,13 +800,13 @@ ULONG Index;
 
 BOOL Spread (struct Window *Win,const ULONG OldPen,const ULONG NewPen)
 {
-const ULONG StartPen = MIN (OldPen,NewPen) , EndPen = MAX (OldPen,NewPen);
+  const ULONG StartPen = MIN (OldPen,NewPen) , EndPen = MAX (OldPen,NewPen);
 
-const ULONG  Range   = EndPen - StartPen;
+  const ULONG  Range   = EndPen - StartPen;
 
-LONG RedStep,GreenStep,BlueStep;
+  LONG RedStep,GreenStep,BlueStep;
 
-ULONG Index,RedLevel,GreenLevel,BlueLevel,ColorBase;
+  ULONG Index,RedLevel,GreenLevel,BlueLevel,ColorBase;
 
   if (Range < 2L) return TRUE;
 
@@ -862,7 +862,7 @@ ULONG Index,RedLevel,GreenLevel,BlueLevel,ColorBase;
 
 VOID KeepPalette (struct Window *Win)
 {
-ULONG Colors;
+  ULONG Colors;
 
   Colors = 1L << (Win->RPort->BitMap->Depth);
 

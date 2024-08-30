@@ -1,0 +1,12 @@
+FROM LIB:c.o "Modules/ColorWindow.o"+"Modules/Iff.o"+"Modules/Gfx.o"+"math_functions.o"+"rle.o"+"histogram.o"+"fmglobals.o"+"fmcgx.o"+"drawing.o"+"symmetry.o"+"shared.o"+"classic.o"+"vampire.o"+"splash.o"+"SAFP.o"+"menu.o"+"version.o"+"fmevents.o"+"FlashMandel.o"+"statistics.o"+"random.o"+"Modules/Mandel.o"+"Modules/Julia.o"+"Modules/Fractals.o"+"detectvamp.o"
+TO "FlashMandel"
+LIB modules/Julia.o modules/Mandel.o modules/Gfx.o modules/ColorWindow.o modules/Iff.o LIB:scm881.lib
+    LIB:sc.lib LIB:amiga.lib
+ADDSYM
+VERBOSE
+DEFINE @__chkabort=@__dummy
+DEFINE __CXM33=__UCXM33
+DEFINE __CXD33=__UCXD33
+DEFINE __CXM22=__UCXM22
+DEFINE __CXD22=__UCXD22
+

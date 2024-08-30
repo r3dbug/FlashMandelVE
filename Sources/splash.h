@@ -16,5 +16,7 @@
 LONG QuerySplashPic (struct ILBMInfo *,UBYTE *);
 void ShowSplashRequester(struct Window*, UBYTE);
 LONG About (struct Window *);
+void AltRequest (struct Window *);
+LONG Choice (struct Window *,TEXT *,TEXT *);
 
 #endif /* SPLASH_H */

@@ -1,4 +1,0 @@
-FROM LIB:c.o "screen.o"+"parse.o"+"saveilbm.o"+"loadilbm.o"+"24bitdemo.o"
-TO "screen"
-LIB LIB:sc.lib LIB:amiga.lib
-

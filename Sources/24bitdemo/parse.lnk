@@ -1,4 +1,0 @@
-FROM LIB:c.o "parse.o"+"loadilbm.o"
-TO "parse"
-LIB LIB:sc.lib LIB:amiga.lib
-

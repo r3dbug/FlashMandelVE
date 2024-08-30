@@ -48,7 +48,6 @@ void SetHVLineBurningShipJulia(void)
 
 void SetHVLineVampire(void) 
 {
-    /*printf("SetHVLineVampire()\n");*/
     optimized=1;
     MHLine=MHLine_Vampire;
     MVLine=MVLine_Vampire;
@@ -82,7 +81,6 @@ void SAFPClassicMandelBruteNoJulia(void)
 {
      SetHVLineClassic();
 	 SetHVLineMandel();
-	 /* SetHVLineClassic(); */
 	 DrawFractal = DrawMandelFractalBruteClassic;
 }
 
@@ -102,12 +100,14 @@ void SAFPClassicMandelTileNoJulia(void)
 
 void SAFPClassicMandelBoundaryWithJulia(void)
 {
-	 DrawFractal = DrawJuliaFractalBoundaryClassic;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))Julia68k_FPU_Classic;
 }
 
 void SAFPClassicMandelBoundaryNoJulia(void)
 {
-	 DrawFractal = DrawMandelFractalBoundaryClassic;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))Mandel68k_FPU_Classic;
 }
 
 /* ------ Vampire ------- */
@@ -135,21 +135,21 @@ void SAFPVampireMandelTileWithJulia(void)
 
 void SAFPVampireMandelTileNoJulia(void)
 {
-	 /*printf("SAFPVampireMandelTileNoJulia()\n");*/	 
      SetHVLineVampire();
 	 SetHVLineMandel();
-	 /*printf("DrawFractal = DrawFractalTiling (%p)\n", DrawFractalTiling);*/
      DrawFractal = DrawFractalTiling;
 }
 
 void SAFPVampireMandelBoundaryWithJulia(void)
 {
-	 DrawFractal = DrawJuliaFractalBoundaryVampire;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = Julia68k_FPU_Vampire;
 }
 
 void SAFPVampireMandelBoundaryNoJulia(void)
 {
-	 DrawFractal = DrawMandelFractalBoundaryVampire;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = Mandel68k_FPU_Vampire;
 }
 
 /******* Multi **********/
@@ -186,14 +186,14 @@ void SAFPClassicMultiIntTileNoJulia(void)
 
 void SAFPClassicMultiIntBoundaryWithJulia(void)
 {
-	 MultiJuliaInCGeneric = MultiJuliaInC;
-	 DrawFractal = DrawMultiJuliaFractalBoundary;	
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiJuliaInC;	
 }
 
 void SAFPClassicMultiIntBoundaryNoJulia(void)
 {
-	 MultiMandelInCGeneric = MultiMandelInC;
-	 DrawFractal = DrawMultiMandelFractalBoundary;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiMandelInC;
 }
 
 /* MultiFloat */
@@ -212,7 +212,6 @@ void SAFPClassicMultiFloatBruteNoJulia(void)
 
 void SAFPClassicMultiFloatTileWithJulia(void)
 {
-	 /* test */
 	 SetHVLineMultiJulia();
 	 MultiJuliaInCGeneric=MultiJuliaFloatingPowerInC;
 	 DrawFractal = DrawFractalTiling;
@@ -220,7 +219,6 @@ void SAFPClassicMultiFloatTileWithJulia(void)
 
 void SAFPClassicMultiFloatTileNoJulia(void)
 {
-	 /* test */
 	 SetHVLineMultiMandel();
 	 MultiMandelInCGeneric=MultiMandelFloatingPowerInC; 
 	 DrawFractal = DrawFractalTiling;
@@ -228,14 +226,14 @@ void SAFPClassicMultiFloatTileNoJulia(void)
 
 void SAFPClassicMultiFloatBoundaryWithJulia(void)
 {
- 	 MultiJuliaInCGeneric = MultiJuliaFloatingPowerInC;
-	 DrawFractal = DrawMultiJuliaFractalBoundary;	
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiJuliaFloatingPowerInC;
 }
 
 void SAFPClassicMultiFloatBoundaryNoJulia(void)
 {
-	 MultiMandelInCGeneric = MultiMandelFloatingPowerInC;
-	 DrawFractal = DrawMultiMandelFractalBoundary;
+ 	 DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiMandelFloatingPowerInC;     
 }
 
 /* ------ Vampire ------- */
@@ -243,114 +241,103 @@ void SAFPClassicMultiFloatBoundaryNoJulia(void)
 
 void SAFPVampireMultiIntBruteWithJulia(void)
 {
-	 MultiJuliaInCGeneric = MultiJuliaInC;
+	 MultiJuliaInCGeneric = (ULONG(*)(ULONG, double, double))MultiJuliaInASM;
 	 DrawFractal = DrawMultiJuliaFractalBrute;
 }
 
 void SAFPVampireMultiIntBruteNoJulia(void)
 {
-	 MultiMandelInCGeneric = MultiMandelInC;
+     MultiMandelInCGeneric = (ULONG(*)(ULONG, double, double))MultiMandelInASM; 
 	 DrawFractal = DrawMultiMandelFractalBrute;
 }
 
 void SAFPVampireMultiIntTileWithJulia(void)
 {
-	 /* test */
 	 SetHVLineMultiJulia();
-	 MultiJuliaInCGeneric=MultiJuliaInC;
+	 MultiJuliaInCGeneric=(ULONG(*)(ULONG, double, double))MultiJuliaInC; 
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPVampireMultiIntTileNoJulia(void)
 {
-	 /* test */
 	 SetHVLineMultiMandel();
-	 MultiMandelInCGeneric=MultiMandelInC; 
+     MultiMandelInCGeneric=(ULONG(*)(ULONG, double, double))MultiMandelInASM;
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPVampireMultiIntBoundaryWithJulia(void)
 {
-	 MultiJuliaInCGeneric = MultiJuliaInC;
-	 DrawFractal = DrawMultiJuliaFractalBoundary;	
+  	 DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiJuliaInASM;
 }
 
 void SAFPVampireMultiIntBoundaryNoJulia(void)
 {
-	 MultiMandelInCGeneric = MultiMandelInC;
-	 DrawFractal = DrawMultiMandelFractalBoundary;
+ 	 DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiMandelInASM;
 }
 
 /* MultiFloat */
 
 void SAFPVampireMultiFloatBruteWithJulia(void)
 {
-	 MultiJuliaInCGeneric = MultiJuliaFloatingPowerInC;
+	 MultiJuliaInCGeneric = (ULONG(*)(ULONG, double, double))MultiJuliaFloatingPowerInASM; 
 	 DrawFractal = DrawMultiJuliaFractalBrute;
 }
 
 void SAFPVampireMultiFloatBruteNoJulia(void)
 {
-	 MultiMandelInCGeneric = MultiMandelFloatingPowerInC;
+	 MultiMandelInCGeneric = (ULONG(*)(ULONG, double, double))MultiMandelFloatingPowerInASM; 
 	 DrawFractal = DrawMultiMandelFractalBrute;
 }
 
 void SAFPVampireMultiFloatTileWithJulia(void)
 {
-	 /* test */
 	 SetHVLineMultiJulia();
-	 MultiJuliaInCGeneric=MultiJuliaFloatingPowerInC;
+	 MultiJuliaInCGeneric=(ULONG(*)(ULONG, double, double))MultiJuliaFloatingPowerInASM; /*MultiJuliaFloatingPowerInC;*/
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPVampireMultiFloatTileNoJulia(void)
 {
-	 /* test */
 	 SetHVLineMultiMandel();
-	 MultiMandelInCGeneric=MultiMandelFloatingPowerInC; 
+	 MultiMandelInCGeneric=(ULONG(*)(ULONG, double, double))MultiMandelFloatingPowerInASM; /*MultiMandelFloatingPowerInC; */
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPVampireMultiFloatBoundaryWithJulia(void)
 {
-	MultiJuliaInCGeneric = MultiJuliaFloatingPowerInC;
-	DrawFractal = DrawMultiJuliaFractalBoundary;	
+	DrawFractal = DrawFractalBoundaryGeneric;
+    FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiJuliaFloatingPowerInASM;	
 }
 
 void SAFPVampireMultiFloatBoundaryNoJulia(void)
 {
-	MultiMandelInCGeneric = MultiMandelFloatingPowerInC;
-	DrawFractal = DrawMultiMandelFractalBoundary;
+	DrawFractal = DrawFractalBoundaryGeneric;
+    FractalIterationGeneric = (ULONG(*)(ULONG, double, double))MultiMandelFloatingPowerInASM;
 }
 
 /******* Buddha **********/
 /* ----- Classic ------- */
+/*
 void SAFPClassicBuddhaBruteWithJulia(void)
 {
-/*	 SetHVLineJulia();
-	 SetHVLineClassic();
-*/	 DrawFractal = DrawBuddhaFractalRandomNumbers;
+	 DrawFractal = DrawBuddhaFractalRandomNumbers;
 }
 
 void SAFPClassicBuddhaBruteNoJulia(void)
 {
-/*	 SetHVLineMandel();
-	 SetHVLineClassic();
-*/	 DrawFractal = DrawBuddhaFractalRandomNumbers;
+	 DrawFractal = DrawBuddhaFractalRandomNumbers;
 }
 
 void SAFPClassicBuddhaTileWithJulia(void)
 {
-/*	 SetHVLineJulia();
-	 SetHVLineClassic();
-*/	 DrawFractal = DrawBuddhaFractalRandomNumbers;
+ 	 DrawFractal = DrawBuddhaFractalRandomNumbers;
 }
 
 void SAFPClassicBuddhaTileNoJulia(void)
 {
-/*	 SetHVLineMandel();
-	 SetHVLineClassic();
-*/	 DrawFractal = DrawBuddhaFractalRandomNumbers;
+	 DrawFractal = DrawBuddhaFractalRandomNumbers;
 }
 
 void SAFPClassicBuddhaBoundaryWithJulia(void)
@@ -362,123 +349,108 @@ void SAFPClassicBuddhaBoundaryNoJulia(void)
 {
 	 DrawFractal = DrawBuddhaFractalRandomNumbers;
 }
-
+*/
 /* ------ Vampire ------- */
-
+/*
 void SAFPVampireBuddhaBruteWithJulia(void)
 {
-/*	 SetHVLineJulia();
-	 SetHVLineVampire();
-*/	 
-	switch (DD_BPP)
+	/*switch (DD_BPP)
 	{
 		case 1 : DrawFractal = DrawBuddhaFractalRandomNumbers; break;
-		default : DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
-	}
-}
+		default : */
+/*        DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+	/*}*/
+/*}
 
 void SAFPVampireBuddhaBruteNoJulia(void)
 {
-/*	 SetHVLineMandel();
-	 SetHVLineVampire();
-*/	 
-	switch (DD_BPP)
+	/*switch (DD_BPP)
 	{
 		case 1 : DrawFractal = DrawBuddhaFractalRandomNumbers; break;
-		default : DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
-	}
-}
+		default : */
+/*        DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+	/*}*/
+/*}
 
 void SAFPVampireBuddhaTileWithJulia(void)
 {
-/*	 SetHVLineJulia();
-	 SetHVLineVampire();
-*/	 
-	switch (DD_BPP)
+	/*switch (DD_BPP)
 	{
 		case 1 : DrawFractal = DrawBuddhaFractalRandomNumbers; break;
-		default : DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
-	}
-}
+		default :*/ 
+/*        DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+	/*}*/
+/*}
 
 void SAFPVampireBuddhaTileNoJulia(void)
 {
-/*	 SetHVLineMandel();
-	 SetHVLineVampire();
-*/	 
-	switch (DD_BPP)
+	/*switch (DD_BPP)
 	{
 		case 1 : DrawFractal = DrawBuddhaFractalRandomNumbers; break;
-		default : DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
-	}
-}
+		default : */
+/*        DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+	/*}*/
+/*}
 
 void SAFPVampireBuddhaBoundaryWithJulia(void)
-{
-/*	 DrawFractal = DrawBuddhaFractalRandomNumbers;
-*/	switch (DD_BPP)
+/*{
+	/*switch (DD_BPP)
 	{
 		case 1 : DrawFractal = DrawBuddhaFractalRandomNumbers; break;
-		default : DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
-	}
-}
+		default : */
+/*        DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+	/*}*/
+/*}
 
 void SAFPVampireBuddhaBoundaryNoJulia(void)
 {
-/*	 DrawFractal = DrawBuddhaFractalRandomNumbers;
-*/
-	switch (DD_BPP)
+	/*switch (DD_BPP)
 	{
 		case 1 : DrawFractal = DrawBuddhaFractalRandomNumbers; break;
-		default : DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
-	}
-}
+		default :*/ 
+        /*DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+	/*}*/
+/*}
 
-
+*/
 /******* Burning Ship **********/
 /* ----- Classic ------- */
 void SAFPClassicBurningShipBruteWithJulia(void)
 {
-/*	 SetHVLineJulia();
-	 SetHVLineClassic();
-*/    BurningShipInCGeneric=BurningShipInCJulia;
-	 DrawFractal = DrawBurningShipFractalBrute; /* JuliaFractalBruteClassic; */
+     BurningShipInCGeneric=BurningShipInCJulia;
+	 DrawFractal = DrawBurningShipFractalBrute;
 }
 
 void SAFPClassicBurningShipBruteNoJulia(void)
 {
-/*	 SetHVLineMandel();
-	 SetHVLineClassic();
-*/     BurningShipInCGeneric=BurningShipInC;
+     BurningShipInCGeneric=BurningShipInC;
 	 DrawFractal = DrawBurningShipFractalBrute;
 }
 
 void SAFPClassicBurningShipTileWithJulia(void)
 {
 	 SetHVLineBurningShipJulia();
-/*	 SetHVLineClassic();
-*/	 BurningShipInCGeneric=BurningShipInCJulia;
+	 BurningShipInCGeneric=BurningShipInCJulia;
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPClassicBurningShipTileNoJulia(void)
 {
 	 SetHVLineBurningShip();
-/*	 SetHVLineClassic();
-*/	 BurningShipInCGeneric=BurningShipInC;
+	 BurningShipInCGeneric=BurningShipInC;
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPClassicBurningShipBoundaryWithJulia(void)
 {
-	 BurningShipInCGeneric=BurningShipInCJulia;
-	 DrawFractal = DrawBurningShipFractalBoundary;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))BurningShipInCJulia;
 }
 
 void SAFPClassicBurningShipBoundaryNoJulia(void)
 {
-	 BurningShipInCGeneric=BurningShipInC;
-	 DrawFractal = DrawBurningShipFractalBoundary;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))BurningShipInC;     
 }
 
 /* ------ Vampire ------- */
@@ -486,45 +458,41 @@ void SAFPClassicBurningShipBoundaryNoJulia(void)
 void SAFPVampireBurningShipBruteWithJulia(void)
 {
 	 SetHVLineBurningShipJulia();
-/*	 SetHVLineVampire();
-*/	 BurningShipInCGeneric=BurningShipInCJulia;
+	 BurningShipInCGeneric=(ULONG(*)(ULONG, double, double))BurningShipInASMJulia; 
 	 DrawFractal = DrawBurningShipFractalBrute;
 }
 
 void SAFPVampireBurningShipBruteNoJulia(void)
 {
 	 SetHVLineBurningShip();
-/*	 SetHVLineVampire();
-*/	 BurningShipInCGeneric=BurningShipInC;
+	 BurningShipInCGeneric=(ULONG(*)(ULONG, double, double))BurningShipInASM; 
 	 DrawFractal = DrawBurningShipFractalBrute;
 }
 
 void SAFPVampireBurningShipTileWithJulia(void)
 {
 	 SetHVLineBurningShipJulia();
-/*	 SetHVLineVampire();
-*/	 BurningShipInCGeneric=BurningShipInCJulia;
+	 BurningShipInCGeneric=(ULONG(*)(ULONG, double, double))BurningShipInASMJulia; 
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPVampireBurningShipTileNoJulia(void)
 {
 	 SetHVLineBurningShip();
-/*	 SetHVLineVampire();
-*/	 BurningShipInCGeneric=BurningShipInC;
+	 BurningShipInCGeneric=(ULONG(*)(ULONG, double, double))BurningShipInASM; 
 	 DrawFractal = DrawFractalTiling;
 }
 
 void SAFPVampireBurningShipBoundaryWithJulia(void)
 {
-	 BurningShipInCGeneric=BurningShipInCJulia;
-	 DrawFractal = DrawBurningShipFractalBoundary;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))BurningShipInASMJulia;
 }
 
 void SAFPVampireBurningShipBoundaryNoJulia(void)
 {
-	 BurningShipInCGeneric=BurningShipInC;
-	 DrawFractal = DrawBurningShipFractalBoundary;
+     DrawFractal = DrawFractalBoundaryGeneric;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))BurningShipInASM;
 }
 
 
@@ -574,7 +542,6 @@ void SAFPVampireMandelBrute(void)
 
 void SAFPVampireMandelTile(void)
 {
-	 /*printf("SAFPVampireMandelTile()\n");*/ 
      switch (JULIA) 
 	 {
 		case TRUE : SAFPVampireMandelTileWithJulia(); break;
@@ -712,6 +679,7 @@ void SAFPVampireMultiFloatBoundary(void)
 
 /******* Buddha **********/
 /* ----- Classic ------- */
+/*
 void SAFPClassicBuddhaBrute(void)
 {
 	 switch (JULIA) 
@@ -738,8 +706,11 @@ void SAFPClassicBuddhaBoundary(void)
 		case FALSE : SAFPClassicBuddhaBoundaryNoJulia(); break;	 
 	 }
 }
+*/
 
 /* ----- Vampire ------- */
+
+/*
 void SAFPVampireBuddhaBrute(void)
 {
 	 switch (JULIA) 
@@ -766,7 +737,7 @@ void SAFPVampireBuddhaBoundary(void)
 		case FALSE : SAFPVampireBuddhaBoundaryNoJulia(); break;	 
 	 }
 }
-
+*/
 /******* Burning Ship *****/
 /* ----- Classic ------- */
 void SAFPClassicBurningShipBrute(void)
@@ -842,7 +813,6 @@ void SAFPClassicMandel(void)
 /* ------ Vampire ------- */
 void SAFPVampireMandel(void)
 {
-	/*printf("SAFPVampireMandel()\n");*/
     switch (algorithm)
 	{
 		case BRUTE : SAFPVampireMandelBrute(); break;
@@ -898,22 +868,42 @@ void SAFPVampireMultiFloat(void)
 /* ----- Classic ------------- */
 void SAFPClassicBuddha(void)
 {
-	switch (algorithm)
+    DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+	
+    /* use C functions */
+    switch (BaseFractalType)
 	{
-		case BRUTE : SAFPClassicBuddhaBrute(); break;
-		case TILE : SAFPClassicBuddhaTile(); break;
-		case BOUNDARY : SAFPClassicBuddhaBoundary(); break;	
+		case MANDEL : 	FractalIterationGeneric = MandelInC;
+                      	break;
+		case MULTIINT : FractalIterationGeneric = MultiMandelInC;
+        			    break;
+		case MULTIFLOAT : 
+        				FractalIterationGeneric = MultiMandelFloatingPowerInC; 
+        				break;
+		case BURNINGSHIP : 
+        				FractalIterationGeneric = (ULONG(*)(ULONG, double, double))BurningShipInC;
+        				break;
 	}
 }
 
 /* ------ Vampire ------- */
 void SAFPVampireBuddha(void)
 {
-	switch (algorithm)
+	DrawFractal = DrawTrueColorBuddhaFractalRandomNumbers;
+
+	/* use C functions */
+	switch (BaseFractalType)
 	{
-		case BRUTE : SAFPVampireBuddhaBrute(); break;
-		case TILE : SAFPVampireBuddhaTile(); break;
-		case BOUNDARY : SAFPVampireBuddhaBoundary(); break;	
+		case MANDEL : 	FractalIterationGeneric = MandelInC;
+                      	break;
+		case MULTIINT : FractalIterationGeneric = MultiMandelInC;
+        			    break;
+		case MULTIFLOAT : 
+        				FractalIterationGeneric = MultiMandelFloatingPowerInC; 
+        				break;
+		case BURNINGSHIP : 
+        				FractalIterationGeneric = (ULONG(*)(ULONG, double, double))BurningShipInC;
+        				break;
 	}
 }
 
@@ -960,7 +950,6 @@ void SAFPClassic(void)
 /* ------ Vampire ------- */
 void SAFPVampire(void) 
 {
-	/*printf("SAFPVampire()\n");*/	
     switch (FractalType)
 	{
 		case MANDEL : SAFPVampireMandel(); break;
@@ -979,7 +968,7 @@ void SetUpGenericFunctions(void)
 	switch (BaseFractalType)
 	{
 		case MANDEL : 	FractalInCGeneric = MandelInC;
-						FractalInCGenericStoreIterations = MandelInCStoreIterations;	
+						FractalInCGenericStoreIterations = MandelInCStoreIterations;
 						break;
 		case MULTIINT :
 						FractalInCGeneric = MultiMandelInCGeneric;
@@ -1001,7 +990,6 @@ void SetUpGenericFunctions(void)
 
 void SetUpPutPixelWithColorModeFunctions(void) 
 {
-	/*printf("DD_BPP: %d, GetBitMapBPP(): %d\n", DD_BPP, GetBitMapBPP(MYILBM.win));*/
 	switch (DD_BPP) {
 		case 1 : PutPixelWithColorMode = PutPixelWithColorModeCLUT; break; /* no smooth coloring in 8bit CLUT */
 		default :
@@ -1021,12 +1009,23 @@ void SetUpPutPixelWithColorModeFunctions(void)
 
 void SAFP(void) 
 {
-	/*printf("SAFP(void)\n");*/	
     SetUpDirectDrawing(MYILBM.win);
 	if (optimized) SAFPVampire();
 	else SAFPClassic();	
 	SetUpGenericFunctions();
-	SetUpPutPixelWithColorModeFunctions();
+    SetUpPutPixelWithColorModeFunctions();
+}
+
+void FirstSAFP(void) 
+{
+    /* same as SAFP() but without 
+     * SetUpDirectDrawing(MYILBM.win); 
+     */
+     
+	if (optimized) SAFPVampire();
+	else SAFPClassic();
+	SetUpGenericFunctions();
+    SetUpPutPixelWithColorModeFunctions();
 }
 
 /********************************************************************/
