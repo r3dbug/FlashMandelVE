@@ -506,20 +506,20 @@ void GetIconToolTypesOrSetDefault(LONG Argc, CONST_STRPTR *Argv)
         MYFONTSTRUCT.ta_YSize = ArgInt (IconToolTypes,"FONTSIZE",DEF_FONTSIZE);
 
         PRIORITY = ArgInt (IconToolTypes,"STARTPRI",DEF_STARTPRI);
-
+        
 		/* override automatic detection of AmigaOS vs AROS/ApolloOS */		
         if ( 
-        	strcmp( ArgString (IconToolTypes,"SYSTEM",NULL), "AROS"
+        	strcmp( ArgString (IconToolTypes,"SYSTEM",""), "AROS"
             	  )
                   == NULL
            ) detected_system=RUNNING_ON_AROS;
         else if (
-        		 strcmp( ArgString (IconToolTypes,"SYSTEM",NULL), "APOLLOOS"
+        		 strcmp( ArgString (IconToolTypes,"SYSTEM",""), "APOLLOOS"
             	       )
                   	   == NULL
            		) detected_system=RUNNING_ON_AROS;
         else if (
-        		 strcmp( ArgString (IconToolTypes,"SYSTEM",NULL), "AMIGAOS"
+        		 strcmp( ArgString (IconToolTypes,"SYSTEM",""), "AMIGAOS"
             	  	   )
                   	   == NULL
            		) detected_system=RUNNING_ON_AMIGAOS;
@@ -632,6 +632,7 @@ void SetMYILBM(void)
 
 LONG main (LONG Argc,CONST_STRPTR *Argv)
 {
+
   if (LaunchedFromShell()) Execute(ASSIGNPARENTDIR,NULL,NULL);
   else Execute (ASSIGNCURRENTDIR,NULL,NULL);
   
