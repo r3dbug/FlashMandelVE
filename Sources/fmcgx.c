@@ -56,6 +56,7 @@ void DebugBitmapFlags(ULONG f)
     if (f & BMF_MINPLANES) printf(" BMF_MINPLANES");
 }
 
+
 void DebugBitmap(struct BitMap *bm)
 {
 	int i;
@@ -97,6 +98,7 @@ void FreeBitMapSafety (struct BitMap *Bitmap)
             FreeBitMap(Bitmap); 
 	}
 }
+
 
 struct BitMap *CopyBitMap (struct Window *Win,WORD Left,WORD Top,WORD Width,WORD Height)
 {

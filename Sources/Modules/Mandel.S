@@ -70,7 +70,7 @@
 
 *        MACHINE  68060 / Vampire 68080
 
-		; single point calculation
+        ; single point calculation
         XDEF  _Mandel68k_FPU_Vampire			; accelerated for Vampire
 		XDEF  _Mandel68k_FPU_Classic			; original algorithm (for 68881/2)
 		
@@ -91,8 +91,8 @@
         XREF _GlobalCOS
         XREF _GlobalSIN
 
-_rts	dc.l 0
-_d0		dc.l 0
+;_rts	dc.l 0
+;_d0		dc.l 0
 
 ;seregs:
 ;; this replaces an fmovem e0-e23,-(sp) 
@@ -125,7 +125,7 @@ _d0		dc.l 0
 ;	move.l  _d0,d0
 ;	move.l  _rts,-(sp)
 ;    rts
-           
+
 _par4iterateasm:
 	; parameters
 	; fp0/fp1: x1, y1 (point 1)	-- regs: e2-e6	(=0)
@@ -301,36 +301,34 @@ _par4iterateasm:
 ; *******************
 
 _Mandel68k_FPU_Vampire:
-	; fmovem   fp0-fp1,-(sp)		; fp0/1 = scratch registers
 	fmove   fp1,e3		; i
 	fmove   fp0,e2		; r
-	fmove.d _BAILOUT_VALUE,e0
+    fmove.d _BAILOUT_VALUE,e0
     
 .loop9:
 	; (1)
-	fmul    e2,e2,e4	; r2=r*r
-	fmul    e3,e3,e5	; i2=i*i
-	; (2)
+	;fmul    e2,e2,e4	; r2=r*r
+	fmove    e2,e4
+    fmul     e4,e4	
+    fmul    e3,e3,e5	; i2=i*i
+    ; (2)
 	fadd    e4,e5,e6    ; r2+i2
-	fmul    e2,e3		; do this instruction here (for free:)
+    fmul    e2,e3		; do this instruction here (for free:)
 	; (3)
-	;fcmp.s  #4,e6		; >=4?
 	fcmp	e0,e6		; cmp with BAILOUT_VALUE	
     fbgt    .exit9
 	; (4)
 	fsub    e5,e4,e2
-	fadd    e3,e3
+    fadd    e3,e3
 	; (5)
 	fadd    fp0,e2		; r=r2-i2+x
 	fadd    fp1,e3		; i=2*r*i+y
 	
-	dbra    d0,.loop9
+	dbra.w  d0,.loop9
 	clr.l   d0
 	
 .exit9:
-.end9	
 	; d0 = result
-	; fmovem   (sp)+,fp0-fp1
 	rts
 	
 ; **************** original routine

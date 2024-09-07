@@ -19,7 +19,16 @@
 #
 
 CC = sc
-AS = vasm
+
+# last stable
+AS = c:vasm19f
+
+# old stable
+# AS = c:vasm19a
+
+# unstable beta
+# AS = c:vasm20beta
+# AS = c:vasm20b_20240901
 
 ASMOBJS = Modules/Mandel.o Modules/Julia.o Modules/Fractals.o detectvamp.o
 CMODULES = Modules/ColorWindow.o Modules/Iff.o Modules/Gfx.o # Modules/delay.o # Modules/UltimateExpansion.o

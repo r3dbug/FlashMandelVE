@@ -143,13 +143,14 @@ void SAFPVampireMandelTileNoJulia(void)
 void SAFPVampireMandelBoundaryWithJulia(void)
 {
      DrawFractal = DrawFractalBoundaryGeneric;
-     FractalIterationGeneric = Julia68k_FPU_Vampire;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))Julia68k_FPU_Vampire;
 }
 
 void SAFPVampireMandelBoundaryNoJulia(void)
 {
+     /* printf("SAFPVampireMandelBoundaryNoJulia() => Mandel68k_FPU_Vampire\n"); */
      DrawFractal = DrawFractalBoundaryGeneric;
-     FractalIterationGeneric = Mandel68k_FPU_Vampire;
+     FractalIterationGeneric = (ULONG(*)(ULONG, double, double))Mandel68k_FPU_Vampire;
 }
 
 /******* Multi **********/

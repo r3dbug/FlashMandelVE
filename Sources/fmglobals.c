@@ -75,6 +75,7 @@ UWORD PENS [] = {BLACK,DARK_GREY,WHITE,WHITE,DARK_GREY,LIGHT_GREY,DARK_GREY,LIGH
 struct Border       MYBORDER          = {0,0,0,0,COMPLEMENT,PAIRS,ZOOMLINE,0};
 
 ULONG detected_system=NOT_RUNNING_ON_AROS;
+BOOL FM_APOLLOOS=FALSE;
 BOOL JULIA = FALSE;
 double ELAPSEDTIME = NULL;
 double ACCUMULATED_BUDDHA_TIME = 0;
@@ -128,11 +129,14 @@ UBYTE *SaveMandPalError       =  "Save palette error";
 BOOL DEPTH_CHANGED;
 struct RastPort TempRP;
 struct Menu *MAINMENU = NULL;
-ULONG FM_ALLOCTEMPRAST_FLAGS=0; /* (older versions of) AROS / ApolloOS can't create / free interleaved bitmpas, so use specific flags */
+/* (older versions of) AROS / ApolloOS can't create / free interleaved bitmpas, so use specific flags */
+ULONG FM_ALLOCTEMPRAST_FLAGS=0;
 
 UBYTE FM_BUSY_MOUSE_POINTER=BUSY_POINTER;
 BOOL FM_FORBID_MENUS=TRUE;		/* forbid menus during calculation when in direct drawing mode */
 BOOL FM_FORBID_SYMMETRY=TRUE;  /* forbid symmetry when in system-friendly drawing */
+BOOL FM_FPUCHECK=TRUE;
+BOOL FM_FPUWARNING_1ST=TRUE;
 
 BOOL FM_NO32BITMODES=TRUE;
 BOOL FM_NO24BITMODES=FALSE;
@@ -325,6 +329,15 @@ LONG IlbmCollects [] = { TAG_END };
 LONG IlbmStops [] = { ID_ILBM, ID_BODY, TAG_END };
 
 /* requester */
+
+struct EasyStruct V2Requester3OperantFPU =
+{
+	sizeof(struct EasyStruct),
+	0,
+	"V2 3-operant instructions",
+	"It seems that your V2 uses a core\nthat does not yet support\n3-operant FPU instructions.\n(Core >=2.18 needed)\n\nSelecting Vampire-specific code\nmay make your Amiga freeze or crash.",
+	"Continue anyway|Use classic m68k instead",
+};
 
 struct EasyStruct NotYetImplemented =
 {
@@ -552,6 +565,32 @@ void Shift(UBYTE* s, UBYTE* d)
         i++;
     }
 	d[i]=0;
+}
+
+BOOL isV2(UBYTE type)
+{
+    switch(type)
+    {
+    	case 1: /* v600 */
+        case 2: /* v500 */
+        case 6: /* v1200 */
+        	return TRUE;
+            break;
+        default :
+        	return FALSE;
+    }
+}
+
+BOOL V2FPUCHECK(void)
+{
+	LONG r;	
+    if (FM_FPUCHECK) 
+    {
+    	r=Has3OperantFPU();
+    	if (r) return TRUE;
+        else return FALSE;
+    }
+    else return TRUE;
 }
 
 double DrawFractalWrapper(struct Window *Win,const LONG a1,const LONG b1,const LONG a2,const LONG b2)

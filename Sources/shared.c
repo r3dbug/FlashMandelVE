@@ -1383,7 +1383,6 @@ ULONG DrawFractalBoundaryGeneric (struct Window *Win,const LONG a1,const LONG b1
  UWORD x, y;
  
  /*Data=*/screenbuffer=GetBitMapPtr(Win->RPort->BitMap);
- 
  resx=a2-a1+1;
  resy=b2-b1+1;
  

@@ -29,4 +29,8 @@ IMPORT ULONG ASMCALL GetStop(void);
 
 IMPORT UWORD ASMCALL SetVampireTaskSwitching(void);
 
+/* V2 cores <= 2.17 do not support 3-operant FPU */
+
+IMPORT LONG ASMCALL Has3OperantFPU(void);
+
 #endif /* DETECTVAMP_H */

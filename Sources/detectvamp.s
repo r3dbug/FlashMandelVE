@@ -24,6 +24,8 @@
 	XDEF 	_GetStop
     XDEF 	_SetVampireTaskSwitching
 
+    XDEF  _Has3OperantFPU
+        		
 _detectvamp:
     move.l   $4.w,a0
     move.w   $128(a0),d0    	; ExecBase->AttnFlags
@@ -125,7 +127,24 @@ _SetVampireTaskSwitching:
 ; a task switch
     ori     #%100000000000,SR
     rts
-    
+
+; V2: cores <=2.17 do not support 3-operant instructions
+; this code must be compiled with vasm19a to "work"
+; "work" means: a) it doesn´t crash on V2 ("inoffensive code")
+; and b) it gives correct results on V4
+_Has3OperantFPU:
+	dc.w	$F23C,$4400,$4000,$0000					; fmove.s #2,fp0
+    dc.w	$71C1,$F23C,$4680,$0000,$0000			; fmove.s #0,e5 
+    dc.w	$7141,$F200,$0180				 		; fmove   fp0,e3
+	dc.w	$7D45,$F200,$0DA3						; fmul e3,e3,e5 (encoding with vasm 1.9a)
+    dc.w    $71C1,$F23C,$46B8,$4080,$0000		    ; fcmp.s  #4,e5
+    fbeq    .yes
+    clr.l   d0
+    rts
+.yes
+	move.l  #1,d0
+	rts
+
 time_start:	dc.l 0
 time_stop:	dc.l 0
 

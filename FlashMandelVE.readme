@@ -1,0 +1,114 @@
+Short:        FlashMandel "Vamped Edition" (FMVE)
+Authors:      Dino Papararo (original FlashMandel) / RedBug aka Marcel Maci (FMVE)
+Uploader:     RedBug (m.maci@gmx.ch)
+Version:      "Burning Ship" V24.9 R2 (September 2024)
+Type:         gfx/fract
+Requires:     Amiga with 020/881 or better CPU and Wb/Kick 3.0+ (Vampire V2/V4 recommended)
+Replaces:     gfx/fract/FlashMandelVE.lha
+Architecture: m68k-amigaos
+
+FlashMandel Vamped Edition "Burning Ship"
+(Short: FMVE "Burning Ship")
+
+This is further developped and amplified "Vamped Edition" of FlashMandel V2.0 published 
+by Dino Papararo in 2001. FMVE is a ´hybrid´ program in the sense that many features should 
+continue to work on "classic Amiga" (currently not much tested). If it is present the Vampire 
+card is autodetected and Vampire specific features and optimizations are used.
+
+NEW FEATURES
+
+Vampire optimizations, e.g.:
+- Use 3-operant functionality of FPU and additional registers (e.g: fadd e1,e3,e5)
+- Parallelize Mandelbrot/Julia set calculation by using free cpu/fpu latencies
+- Speed improvement is around 30% compared to "classic" version.
+- Possibility to switch forth and back between classic and optimized via menu or keyboard
+- Direct and fast drawing to screenbuffer (with possibility to switch back to AmigaOS
+functions if desired)
+
+New fractals:
+- Multibrot (including fractional powers > 1.0)
+- BurningShip 
+- Buddhabrot (Nebulabrots)
+
+New calculation algorithms (available for all fractals):
+- Brute force
+- Tiling (original algorithm by Dino Papararo)
+- Boundary trace
+- Random drawing (for Nebulabrots)
+- Symmetry (for main view, if possible)
+
+New coloring algorithms (besides "classic iteration count") for 24bit modes:
+- Renormalized iteration count
+- Cyclic Sinus Coloring (like FlashMandelNG)
+- Three channel 24bit coloring for Nebulabrots
+
+New file format:
+- Support for Deep IFF (ILBM) Images (24bit truecolor)
+- New data chunk to include all calculation data
+- Histogram file for Buddhabrot (with RLE compression)
+- Backwards compatibility with old formats (pictures and palettes)
+
+New features / functions:
+- Real time visualization of orbits (in main view for all fractals)
+- Nebulabrot calculation can be stopped and resumed
+- Bailout value can be modified
+
+New pictures:
+- Sample pictures for new fractals have been included
+- Nice splash screen and new icon
+
+As with the original program all source files are bundled with the program and you can use
+it for whatever you want to use them!
+
+Compile and link with SAS/C and VASM:
+
+vasm -m68080 -Fhunk source_file.s -o object_file.o
+sc link FlashMandel detectvamp.o
+
+Or (easier), by typing:
+
+smake
+
+in the main folder.
+
+See FlashMandelVE.guide in Docs folder for more information.
+
+Thanks for Dino Papararo for his advice and permission to continue development for this
+new 68k version of FlashMandel.
+
+Have fun!
+
+**********************************************************************************************
+
+Readme from the original author (V2.0):
+
+Full functional program for rendering Mandelbrot & Julia fractals in about 62k of code with many nice features.
+Support for ECS/AGA/RTG and 68020/68060 Amiga with an FPU.
+C & Asm 68k source included !
+
+FlashMandel is Giftware, If you like it just sent nice goodies to author just like $ or gold medals ;-))
+
+**********************************************************************************************
+
+New in this version:
+
+ Removed a stupid enforcer hit when accepting new limits.
+
+ I forgot to allocate the memory for the font name record... bugfixed sorry!
+
+ Now all pictures and palettes saved have a copyright note chunk inside.
+
+ Now when 'TAB' key is pressed during a rendering the skipped zone is hilighted 5 times.
+
+ You can show the guide choosing "Help..." from project menu or hitting the 'HELP' key into main window in asyncronous way.
+
+ Minor but important internal code changes with potential bugs removed.
+
+ Replaced 1 Julia picture and reworked a bit 2 palettes.
+
+ *** Added into source directory an assembly PPC routine never tested and implemented but it should be a realtime routine ;-)
+
+***********************************************************************************************
+*If you are an Amiga programmer and like FlashMandel contact me for a PPC porting under WarpOS*
+*or better MorphOS with REALTIME rendering and deeper calculations.                           *
+***********************************************************************************************

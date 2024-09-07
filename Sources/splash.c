@@ -96,7 +96,7 @@ void ShowSplashRequester(struct Window* w, UBYTE seconds)
 			Delay(10);
 			for (temp=1;temp<(seconds+1)*5+2;temp++)
 			{
-				if (DOUBLETOGGLE) dbl=TRUE;			
+                if (DOUBLETOGGLE) dbl=TRUE;	
                 if (*((UBYTE*)0xbfe001) & 64) Delay(10);
 				else break;
     		}
@@ -135,12 +135,24 @@ LONG About (struct Window *Win)
 
   static struct EasyStruct MyReq_2 = { sizeof (struct EasyStruct),0,"Workgroup","Greetings & thanks in alphabetical order:\n\n  Claudio Pucci\n  Giorgio Signori\n  Giuseppe Staffelli\n  Sergio Tassi\n\n\nIf someone hasn't the courage to risk\nfor his ideals, either his ideals are\nworth nothing, or worth nothing is he\n\nAmiga forever.\n\n","Ok" };
 
+  struct EasyStruct MyReq = { sizeof (struct EasyStruct),NULL,0,0,"Yes|No" };
+
+  ULONG StartSec = NULL , EndSec = NULL, StartMicro = NULL, EndMicro = NULL;	
+
   LONG More;
 
+  Shift( tb, tb1 );
+  Shift( mb, mb1 );
+
+  CurrentTime (&StartSec,&StartMicro);
+  
   More = EasyRequest (Win,&MyReq_1,0);
-
+  
+  CurrentTime (&EndSec,&EndMicro);
+  
   if (! More) EasyRequest (Win,&MyReq_2,0);
-
+  else if (!(EndSec-StartSec)) AltRequest(MYILBM.win);
+  
   return More;
 }
 

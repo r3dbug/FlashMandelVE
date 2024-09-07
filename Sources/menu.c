@@ -335,8 +335,11 @@ void SetMenuSelection(void)
 	if (USE_PERIODICITY) CheckMenuItem(1,6,9);
     else UncheckMenuItem(1,6,9);
 
-	/* disable vampire optimizations when not on vampire */
-	if (!vampire) OffMenu (MYILBM.win,FULLMENUNUM (1,5,0));
+	/* vampire optimizations (disable when not on vampire) */
+    ClearMenuRange(1,5,0,1);
+    if (optimized) CheckMenuItem(1,5,0);
+    else CheckMenuItem(1,5,1);
+    if (!vampire) OffMenu (MYILBM.win,FULLMENUNUM (1,5,0));
     
 	/* disable color cycling for rgb */
 	if (DD_BPP>1) 
@@ -579,8 +582,8 @@ BOOL PrepareMainMenuWindowAndPointer(void)
 		ItemAddress(MAINMENU,FULLMENUNUM(0,9,2))->Flags |= CHECKED;  
 
 		/* check vampire menus */        
-        if (optimized) ItemAddress(MAINMENU,FULLMENUNUM(1,5,0))->Flags |= CHECKED;  
-        else ItemAddress(MAINMENU,FULLMENUNUM(1,5,1))->Flags |= CHECKED;       
+        //if (optimized) ItemAddress(MAINMENU,FULLMENUNUM(1,5,0))->Flags |= CHECKED;  
+        //else ItemAddress(MAINMENU,FULLMENUNUM(1,5,1))->Flags |= CHECKED;       
         
 		/* check algorithm menu */
 		switch (algorithm) 
@@ -1506,13 +1509,60 @@ ULONG ProcessMenu (struct Window *Win,UWORD Code)
                    
                         /* Vampire selection */
                         
-                        case 5 : SwitchMenuSelection(1,5,1-optimized,SUBNUM(Code));
-								 optimized=1-SUBNUM(Code);
-                                 
-								 SAFP();
-								 
-								 Choice=SWITCH_CPU;
-								 
+                        case 5 : if (SUBNUM(Code)==0) 
+                        		 {
+                        		 	/* user selects menu for vampire code */
+                        			if (isV2(vampire_type))
+                                    {
+                                   		/* printf("We are on a V2 => check 3-operant ability\n"); */
+                                        if (V2FPUCHECK())
+                                        {
+                                        	/* all good - core >= 2.18 or Tooltype FPUCHECK=NO */
+                                            optimized=1;
+                                            SAFP();
+                                            SetMenuSelection();
+                                        }
+                                        else
+                                        {
+                                          if (FM_FPUWARNING_1ST)
+                                          {	
+                                            /* show warning */
+                                        	if (EasyRequest (MYILBM.win,&V2Requester3OperantFPU,0))
+                                            {
+                                            	/* printf("set vampire code\n"); */
+                                                optimized=1;
+                                                FM_FPUWARNING_1ST=FALSE;
+                                                SAFP();
+                                                SetMenuSelection();
+                                            }
+                                            else
+                                            {
+                                            	/* printf("Do not select vampire code\n"); */
+                                        		SetMenuSelection();	
+                                            }
+                                          }
+                                          else
+                                          {
+                                        	optimized=1;
+                                            SAFP();
+                                            SetMenuSelection();
+                                          } 
+                                        } 
+                                    } 
+                                    else
+                                    {
+                        				/* printf("We are on a V4 (type=%u)\n", vampire_type); */
+								 		optimized=1-SUBNUM(Code);        
+								 		Choice=SWITCH_CPU;
+								 	}
+                                 } 
+                                 else 
+                                 {
+                                 	optimized=0;
+                                 	
+                                    SAFP();
+								 	SetMenuSelection();
+                                 }
                                  break;
 						
                         case 6 : /* algorithm */

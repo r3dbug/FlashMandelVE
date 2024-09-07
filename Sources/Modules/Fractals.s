@@ -308,42 +308,42 @@ _MultiMandelFloatingPowerInASM:
 	fblt    	.xltzeroyltzero ; x<0 && y<0  (1x)
 		
 	fmove.s 	#0,fp0
-	bra.s		.endatan2
+	bra			.endatan2
 
 .xltzeroyltzero:
 	fatan   	fp0
     fadd.d  	#PINEG,fp0
-	bra.s		.endatan2
+	bra			.endatan2
 		
 .xltzeroygtzero:
 	fatan   	fp0
     fadd.d  	#PI,fp0
-	bra.s		.endatan2
+	bra			.endatan2
 				
 .yiszero:
 	fcmp.s  	#0,e2			; compare x
 	fblt    	.y0xltzero		; y==0 && x<0
 	fmove.s 	#0,fp0
-	bra.s		.endatan2
+	bra			.endatan2
 
 .y0xltzero:
 	fmove.d  	#PINEG,fp0		; return -PI
-	bra.s		.endatan2
+	bra			.endatan2
 
 .xiszero:
 	fcmp.s  	#0,e3			; compare y
 	fbgt		.ygtzero		; y>0
 	fblt    	.yltzero		; y<0
 	fmove.s 	#0,fp0
-	bra.s		.endatan2
+	bra			.endatan2
 		
 .yltzero:
 	fmove.d  	#PIDIV2NEG,fp0
-	bra.s		.endatan2
+	bra			.endatan2
 
 .ygtzero:
 	fmove.d   	#PIDIV2,fp0
-	bra.s		.endatan2
+	bra			.endatan2
 		
 .xgtzero:
 	fatan   	fp0				; arctan(y/x)	
@@ -434,42 +434,42 @@ _MultiJuliaFloatingPowerInASM:
 	fblt    	.xltzeroyltzero ; x<0 && y<0  (1x)
 		
 	fmove.s 	#0,fp0
-	bra.s		.endatan2
+	bra		.endatan2
 
 .xltzeroyltzero:
 	fatan   	fp0
     fadd.d  	#PINEG,fp0
-	bra.s		.endatan2
+	bra		.endatan2
 		
 .xltzeroygtzero:
 	fatan   	fp0
     fadd.d  	#PI,fp0
-	bra.s		.endatan2
+	bra		.endatan2
 				
 .yiszero:
 	fcmp.s  	#0,e2			; compare x
 	fblt    	.y0xltzero		; y==0 && x<0
 	fmove.s 	#0,fp0
-	bra.s		.endatan2
+	bra		.endatan2
 
 .y0xltzero:
 	fmove.d  	#PINEG,fp0		; return -PI
-	bra.s		.endatan2
+	bra		.endatan2
 
 .xiszero:
 	fcmp.s  	#0,e3			; compare y
 	fbgt		.ygtzero		; y>0
 	fblt    	.yltzero		; y<0
 	fmove.s 	#0,fp0
-	bra.s		.endatan2
+	bra		.endatan2
 		
 .yltzero:
 	fmove.d  	#PIDIV2NEG,fp0
-	bra.s		.endatan2
+	bra		.endatan2
 
 .ygtzero:
 	fmove.d   	#PIDIV2,fp0
-	bra.s		.endatan2
+	bra		.endatan2
 		
 .xgtzero:
 	fatan   	fp0				; arctan(y/x)	
@@ -582,7 +582,7 @@ _StoreIterationsCoreASM:
 
 .loop:
 	cmp.l   d0,d1
-    beq.s   .exit
+    beq   .exit
     
 	fmove.d (a1,d1.l*8),fp3		; tim=im[j]
     fmove.d (a0,d1.l*8),fp2		; tre=re[j]

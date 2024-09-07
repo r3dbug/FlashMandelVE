@@ -77,8 +77,8 @@
  */
 #define VERSION_TITLE 			"FlashMandel Vamped Edition (Burning Ship)"
 #define VERSION_YEAR 			24
-#define VERSION_MONTH			8
-#define VERSION_DAY				28 /* see numbering convention in version.h */
+#define VERSION_MONTH			9
+#define VERSION_DAY				2 /* see numbering convention in version.h */
 
 #define VERSION_AUTHOR1     	"Dino Papararo"
 #define VERSION_MAIL1			"dino.papararo@gmail.com"
@@ -309,7 +309,6 @@
 extern TEXT VERSION_STRING [];
 
 /* FlashMandel functions shared between Classic Amigas and  Vampire */
-
 IMPORT double ASMCALL powFPU (REG (fp0,double),REG (fp1,double)); 
 IMPORT double ASMCALL sinFPU (REG (fp0,double)); 
 IMPORT double ASMCALL cosFPU (REG (fp0,double)); 
@@ -383,6 +382,8 @@ UWORD GetVampireCore(void);
 UWORD CheckRMB(void);
 UWORD CheckLMB(void);
 void Shift(UBYTE*, UBYTE*);
+BOOL isV2(UBYTE);
+BOOL V2FPUCHECK(void);
 
 /*ULONG CCD (ULONG, ULONG); /* CCD = cache counter difference */
 /*
@@ -459,6 +460,8 @@ extern UBYTE *SaveMandPalError;
 extern UBYTE FM_BUSY_MOUSE_POINTER;
 extern BOOL FM_FORBID_MENUS;
 extern BOOL FM_FORBID_SYMMETRY;
+extern BOOL FM_FPUCHECK;
+extern BOOL FM_FPUWARNING_1ST;
 
 extern BOOL FM_NO32BITMODES;
 extern BOOL FM_NO24BITMODES;
@@ -509,6 +512,7 @@ extern double FinalXP1, FinalXP2, FinalXP3, FinalXP4;
 extern double FinalYP1, FinalYP2, FinalYP3, FinalYP4;
 extern double GlobalP;
 extern ULONG detected_system;
+extern BOOL FM_APOLLOOS;
 extern ULONG MASK;
 
 extern UBYTE *PixelLine;
@@ -615,6 +619,7 @@ extern LONG PRIORITY;
 extern struct Task *THISTASK;
 
 extern struct EasyStruct NotYetImplemented;
+extern struct EasyStruct V2Requester3OperantFPU;
 extern struct EasyStruct NoMemory4Buddha;
 extern struct EasyStruct ExperimentalFunction;
 extern CHIP UWORD ZoomPointer[];
