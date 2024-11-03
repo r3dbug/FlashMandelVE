@@ -77,7 +77,7 @@
  */
 #define VERSION_TITLE 			"FlashMandel Vamped Edition (Burning Ship)"
 #define VERSION_YEAR 			24
-#define VERSION_MONTH			9
+#define VERSION_MONTH			11
 #define VERSION_DAY				2 /* see numbering convention in version.h */
 
 #define VERSION_AUTHOR1     	"Dino Papararo"

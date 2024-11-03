@@ -1450,8 +1450,7 @@ ULONG ProcessMenu (struct Window *Win,UWORD Code)
  						
 													/* Coordinates to make 
                                                      * the Buddha sit ... :) 
-                                                     *
-                                                     /
+                                                     */
  													RMAX=2.0;
  													RMIN=-2.0;
  	
@@ -1511,7 +1510,7 @@ ULONG ProcessMenu (struct Window *Win,UWORD Code)
                         
                         case 5 : if (SUBNUM(Code)==0) 
                         		 {
-                        		 	/* user selects menu for vampire code */
+                                    /* user selects menu for vampire code */
                         			if (isV2(vampire_type))
                                     {
                                    		/* printf("We are on a V2 => check 3-operant ability\n"); */
@@ -1554,14 +1553,16 @@ ULONG ProcessMenu (struct Window *Win,UWORD Code)
                         				/* printf("We are on a V4 (type=%u)\n", vampire_type); */
 								 		optimized=1-SUBNUM(Code);        
 								 		Choice=SWITCH_CPU;
+                                        
+                                        SAFP();
+                                        SetMenuSelection();
 								 	}
                                  } 
                                  else 
                                  {
-                                 	optimized=0;
-                                 	
+                                    optimized=0;
                                     SAFP();
-								 	SetMenuSelection();
+                                    SetMenuSelection();
                                  }
                                  break;
 						

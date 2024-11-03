@@ -5,6 +5,7 @@
 /* Vampire detection */
 
 IMPORT UWORD ASMCALL detectvamp(void);
+IMPORT ULONG ASMCALL getattnflags(void);
 IMPORT ULONG ASMCALL detectm68k(void);
 
 /* Cache functions */

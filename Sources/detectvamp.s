@@ -10,6 +10,7 @@
 ; 7 = V4_600 (Manticore)
 ; What the heck is Kraken? ;)
 
+	XDEF	_getattnflags
     XDEF    _detectvamp
 	XDEF    _detectm68k
 ;	XDEF    _get_dcache_hits
@@ -25,7 +26,13 @@
     XDEF 	_SetVampireTaskSwitching
 
     XDEF  _Has3OperantFPU
-        		
+
+_getattnflags:
+	clr.l    d0
+    move.l   $4.w,a0
+    move.w   $128(a0),d0    	; ExecBase->AttnFlags
+	rts
+            		
 _detectvamp:
     move.l   $4.w,a0
     move.w   $128(a0),d0    	; ExecBase->AttnFlags
@@ -37,7 +44,7 @@ _detectvamp:
 .is68080:
     clr.l	 d0
     move.w   $dff3fc,d0
-    asr.l    #8,d0
+    lsr.l    #8,d0
     rts
     
 .no68080:

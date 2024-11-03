@@ -334,8 +334,8 @@ struct EasyStruct V2Requester3OperantFPU =
 {
 	sizeof(struct EasyStruct),
 	0,
-	"V2 3-operant instructions",
-	"It seems that your V2 uses a core\nthat does not yet support\n3-operant FPU instructions.\n(Core >=2.18 needed)\n\nSelecting Vampire-specific code\nmay make your Amiga freeze or crash.",
+	"V2 3-operand instructions",
+	"It seems that your V2 uses a core\nthat does not yet support\n3-operand FPU instructions.\n(Core >=2.18 needed)\n\nSelecting Vampire-specific code\nmay make your Amiga freeze or crash.",
 	"Continue anyway|Use classic m68k instead",
 };
 

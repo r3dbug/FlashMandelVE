@@ -40,6 +40,13 @@
  *
  */
 
+/* Bugfixes after 24.9 R2 (=> for 24.11 R2)
+   - CPU/FPU detection: check for Arne disabled (problem with V4 accelerators
+     in CRT-mode)
+   - Fixed switching from Vampire to classic (not sure if it was buggy)
+   - AntiBuddha didn't work (due to accidentally commented out code ...)
+ */
+ 
 /*
 Ideas / to do's:
 - all variants of MultiMandel (<=1)
@@ -412,7 +419,8 @@ void CheckVampire(void)
   
   /* autodetection for Vampire */
   vampire_type=detectvamp();
- 
+  /* printf("detectvamp(): %u\n", vampire_type);*/
+  
   /* problem: sometimes (on uae) detectvamp() returns >0 */
   /* => do further tests to be sure it is a Vampire */
   /* (detectvamp() corrected - this problem might be solved now) */
@@ -430,7 +438,7 @@ void CheckVampire(void)
     	/* V4 */    
         default :
         	/* all V4 have ARNE => search for that */
-  			if (!DetectArne()) vampire_type=0; /* not a Vampire if there is no Arne (greetings;) */          
+//  			if (!DetectArne()) vampire_type=0; /* not a Vampire if there is no Arne (greetings;) */          
   }
  
   if (vampire_type) 
@@ -667,6 +675,11 @@ LONG main (LONG Argc,CONST_STRPTR *Argv)
    *  => set optimized to false by default 
    */
   if (isV2(vampire_type)) optimized=FALSE;
+  
+  /*
+  printf("vampire_type: %u detectm68k(): %u $dff3fc: %04x ATTN-Flags: %08x optimized: %u DetectArne(): %u\n", 
+  	vampire_type, detectm68k(), *((UWORD*)0xdff3fc), getattnflags(), optimized, DetectArne());
+  */
   
   InitBuddha();
   

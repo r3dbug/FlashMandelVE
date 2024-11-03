@@ -76,7 +76,7 @@ See @{"Compatibility" link "compatibility"} for supported systems and requiremen
 
 @{b}COMPATIBILITY@{ub}
 
-FMVE works best with a Vampire card (either V2 or V4) and an original AmigaOS system. All versions of @{b}AmigaOS 3.1@{ub} (or @{b}higher@{ub}) should work. FMVE probably works well also on @{b}AmigaOS 3.0@{ub} (but this has not been tested). Please use the @{b}latest core@{ub} (10000+) on your Vampire card to be sure to have access to all features.
+FMVE works best with a Vampire card (either V2 or V4) and an original AmigaOS system. All versions of @{b}AmigaOS 3.1@{ub} (or @{b}higher@{ub}) should work. FMVE probably works well also on @{b}AmigaOS 3.0@{ub} (but this has not been tested). Please use the @{b}latest core@{ub} (V4: 10000, V2: 2.18) on your Vampire card to be sure to have access to all features.
 
 Since the Vampire cards are sold with @{b}ApolloOS@{ub} (which, for copyright reasons, is based on @{b}AROS@{ub}) specific efforts have been made to make FMVE compatible with this reimplementation of AmigaOS. Apart from very minor differences (like timings for menu title bar hiding or some adaptions to create bitmaps in order to be fully compatible) everything works now, so that FMVE can be used without restrictions on this system.
 
@@ -211,19 +211,21 @@ FMVE includes a new icon and a new splash screen that shows a ship sailing on a 
 
 @{b}(17) Tooltypes@{ub}
 
-FMVE has a new Tooltype named SYSTEM that can have three values:
+@{b}SYSTEM:@{ub} With this tooltype FMVE makes specific configurations to run better on different systems. Three values are possible:
 
-VALUE           | MEANING
----------------------------------------------------------------
-SYSTEM=AROS     | FMVE should make specific configuration to 
-                | run better on an m68k AROS system.
----------------------------------------------------------------
-SYSTEM=APOLLOOS | Same as AROS (ApolloOS is based on AROS)
----------------------------------------------------------------
-SYSTEM=AMIGAOS  | FMVE is informed that it runs on AmigaOS
+SYSTEM=AROS       FMVE does not use BMF_INTERLEAVED for bitmaps 
+                  and gives system more time to hide title bar.
+SYSTEM=APOLLOOS   FMVE uses longer delay for title bar.
+SYSTEM=AMIGAOS    FMVE is informed that it runs on AmigaOS
 
-Normally, it is not necessary to set this value, because FMVE autodetects the system it is running on. So, use these only if the automatic detection doesn´t work (the tooltype overrides the automatic detection).
+FMVE autodetects if it is running on AROS or AmigaOS (only use this tooltype if FMVE is not running correctly).
 
+@{b}FPUCHECK:@{ub} Determines if FMVE should check whether the V2 FPU supports 3-operant instructions or not:
+
+FPUCHECK=YES      Enable FPU-check  
+FPUCHECK=NO       Disable FPU-check
+
+By default, this check is enabled for V2 cards. If the program freezes on V2, disable this option.
 
 @{b}(18) Sources@{ub}
 

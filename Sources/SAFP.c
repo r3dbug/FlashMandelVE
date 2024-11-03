@@ -106,6 +106,7 @@ void SAFPClassicMandelBoundaryWithJulia(void)
 
 void SAFPClassicMandelBoundaryNoJulia(void)
 {
+     /* printf("SAFPClassicMandelBoundaryNoJulia() => Mandel68k_FPU_Classic\n"); */
      DrawFractal = DrawFractalBoundaryGeneric;
      FractalIterationGeneric = (ULONG(*)(ULONG, double, double))Mandel68k_FPU_Classic;
 }
@@ -148,7 +149,7 @@ void SAFPVampireMandelBoundaryWithJulia(void)
 
 void SAFPVampireMandelBoundaryNoJulia(void)
 {
-     /* printf("SAFPVampireMandelBoundaryNoJulia() => Mandel68k_FPU_Vampire\n"); */
+     /* printf("SAFPVampireMandelBoundaryNoJulia() => Mandel68k_FPU_Vampire\n"); */
      DrawFractal = DrawFractalBoundaryGeneric;
      FractalIterationGeneric = (ULONG(*)(ULONG, double, double))Mandel68k_FPU_Vampire;
 }
@@ -1010,6 +1011,7 @@ void SetUpPutPixelWithColorModeFunctions(void)
 
 void SAFP(void) 
 {
+	/* printf("SAFP(): optimized: %u\n", optimized); */
     SetUpDirectDrawing(MYILBM.win);
 	if (optimized) SAFPVampire();
 	else SAFPClassic();	
@@ -1022,8 +1024,7 @@ void FirstSAFP(void)
     /* same as SAFP() but without 
      * SetUpDirectDrawing(MYILBM.win); 
      */
-     
-	if (optimized) SAFPVampire();
+   	if (optimized) SAFPVampire();
 	else SAFPClassic();
 	SetUpGenericFunctions();
     SetUpPutPixelWithColorModeFunctions();

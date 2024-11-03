@@ -1339,7 +1339,7 @@ UWORD LoadFractalGeneric(ULONG p) {
 	cy = IMAX-y*INCREMIMAG;  /* FlashMandel is upside down (..) */
 	cx = x*INCREMREAL+RMIN;	
     
-	Color = i = FractalIterationGeneric(ITERATIONS,cx,cy);
+    Color = i = FractalIterationGeneric(ITERATIONS,cx,cy);
 	
 	if (Color)
     {
